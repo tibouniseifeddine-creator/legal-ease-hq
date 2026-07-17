@@ -287,17 +287,27 @@ function Dashboard() {
                   <Sparkles className="w-4 h-4 text-gold" />
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                  {quickActions.map((a) => (
-                    <button
-                      key={a.label}
-                      className="flex flex-col items-center gap-2 p-4 rounded-xl border border-border hover:border-gold hover:bg-amber-50/50 transition group"
-                    >
-                      <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-navy group-hover:bg-gold/20 transition">
-                        <a.icon className="w-5 h-5" />
-                      </div>
-                      <div className="text-xs font-semibold text-center">{a.label}</div>
-                    </button>
-                  ))}
+                  {quickActions.map((a) => {
+                    const cls = [
+                      "flex flex-col items-center gap-2 p-4 rounded-xl border transition group",
+                      a.highlight
+                        ? "border-gold bg-gradient-to-b from-amber-50 to-white hover:brightness-95"
+                        : "border-border hover:border-gold hover:bg-amber-50/50",
+                    ].join(" ");
+                    const inner = (
+                      <>
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition ${a.highlight ? "bg-gold text-gold-foreground" : "bg-muted text-navy group-hover:bg-gold/20"}`}>
+                          <a.icon className="w-5 h-5" />
+                        </div>
+                        <div className="text-xs font-semibold text-center">{a.label}</div>
+                      </>
+                    );
+                    return a.to ? (
+                      <Link key={a.label} to={a.to} className={cls}>{inner}</Link>
+                    ) : (
+                      <button key={a.label} className={cls}>{inner}</button>
+                    );
+                  })}
                 </div>
               </section>
             </div>
@@ -357,10 +367,10 @@ function Dashboard() {
                 </ul>
               </div>
 
-              <button className="w-full flex items-center justify-center gap-2 bg-card border border-border rounded-2xl p-4 hover:bg-muted transition text-sm font-semibold">
+              <Link to="/contract-review" className="w-full flex items-center justify-center gap-2 bg-card border border-border rounded-2xl p-4 hover:bg-muted transition text-sm font-semibold">
                 <Bot className="w-4 h-4 text-gold" />
-                اسأل مساعد NexLaw
-              </button>
+                اسأل مساعد NexLaw لمراجعة عقد
+              </Link>
             </aside>
           </div>
         </main>
