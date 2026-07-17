@@ -1,10 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Home, Users, Building2, FileText, FolderClosed, CheckSquare,
   Calendar, Receipt, BarChart3, Settings, Search, Bell, Mail,
   Menu, Plus, FolderOpen, MoreVertical, ChevronLeft, Sparkles,
   AlertTriangle, ClipboardList, FilePlus, Building, UploadCloud,
-  HomeIcon, StickyNote, CalendarPlus, Bot, Brain,
+  HomeIcon, StickyNote, CalendarPlus, Bot, Brain, ScanSearch,
 } from "lucide-react";
 import heroImg from "@/assets/hero-handshake.jpg";
 import robotImg from "@/assets/ai-robot.png";
@@ -53,12 +53,12 @@ const alerts = [
   { dot: "bg-sky-500", title: "موعد اليوم 11:00 ص", subtitle: "مع العميل فاطمة الزهراء" },
 ];
 
-const quickActions = [
+const quickActions: Array<{ icon: typeof FilePlus; label: string; to?: string; highlight?: boolean }> = [
+  { icon: ScanSearch, label: "مراجعة عقد بالذكاء", to: "/contract-review", highlight: true },
   { icon: FilePlus, label: "إنشاء عقد بيع" },
   { icon: Building, label: "إنشاء عقد إيجار" },
   { icon: UploadCloud, label: "رفع وثيقة" },
   { icon: HomeIcon, label: "أضف عقار" },
-  { icon: StickyNote, label: "مذكرة جديدة" },
   { icon: CalendarPlus, label: "موعد جديد" },
 ];
 
