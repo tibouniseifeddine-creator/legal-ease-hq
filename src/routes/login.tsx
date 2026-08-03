@@ -38,8 +38,11 @@ function LoginPage() {
       .limit(1)
       .maybeSingle();
     if (membership) return true;
+    const metadataOrgName =
+      typeof userData.user.user_metadata?.org_name === "string" ? userData.user.user_metadata.org_name : "";
+    const finalName = name.trim() || metadataOrgName.trim() || "مكتبي";
     const { error: rpcError } = await supabase.rpc("create_organization_with_owner", {
-      org_name: name.trim() || "مكتبي",
+      org_name: finalName,
     });
     if (rpcError) {
       setError(rpcError.message);
@@ -60,7 +63,7 @@ function LoginPage() {
           password,
           options: {
             emailRedirectTo: window.location.origin,
-            data: { full_name: fullName },
+            data: { full_name: fullName, org_name: orgName.trim() },
           },
         });
         if (signUpError) throw signUpError;
@@ -75,7 +78,7 @@ function LoginPage() {
 
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) throw signInError;
-      if (!(await ensureOrganization(orgName || "مكتبي"))) return;
+      if (!(await ensureOrganization(orgName))) return;
       navigate({ to: "/" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "تعذر إتمام العملية");
