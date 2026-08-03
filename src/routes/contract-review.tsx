@@ -6,8 +6,10 @@ import {
   XCircle, AlertCircle, Lightbulb, Loader2, ClipboardList,
 } from "lucide-react";
 import { reviewContract, type ContractReview } from "@/lib/contract-review.functions";
+import { requireOrgSession } from "@/lib/require-org-session";
 
 export const Route = createFileRoute("/contract-review")({
+  beforeLoad: requireOrgSession,
   head: () => ({
     meta: [
       { title: "مراجعة العقود بالذكاء الاصطناعي — NexLaw" },

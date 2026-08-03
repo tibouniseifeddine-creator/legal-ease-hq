@@ -70,6 +70,8 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  // جلسة Supabase محفوظة في localStorage، لذا تُنفَّذ حراسة المسارات على العميل
+  ssr: false,
   head: () => ({
     meta: [
       { charSet: "utf-8" },
