@@ -10,8 +10,6 @@ export const getRouter = () => {
     context: { queryClient },
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,
-    // جلسة Supabase محفوظة في localStorage، لذا تُنفَّذ حراسة المسارات على العميل
-    defaultSsr: false,
   });
 
   return router;
