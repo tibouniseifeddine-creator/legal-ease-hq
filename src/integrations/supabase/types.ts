@@ -65,6 +65,73 @@ export type Database = {
           },
         ]
       }
+      contracts: {
+        Row: {
+          client_id: string | null
+          content: string | null
+          contract_date: string
+          contract_type: string
+          created_at: string
+          created_by: string | null
+          id: string
+          organization_id: string
+          property_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          content?: string | null
+          contract_date?: string
+          contract_type?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id: string
+          property_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          content?: string | null
+          contract_date?: string
+          contract_type?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id?: string
+          property_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           created_at: string
