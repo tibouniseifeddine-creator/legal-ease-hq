@@ -21,7 +21,7 @@ const navItems: Array<{ icon: typeof Home; label: string; active?: boolean; to?:
   { icon: Users, label: "العملاء", to: "/clients" },
   { icon: Building2, label: "العقارات", to: "/properties" },
   { icon: FileText, label: "العقود", to: "/contracts" },
-  { icon: FolderClosed, label: "الوثائق" },
+  { icon: FolderClosed, label: "الوثائق", to: "/documents" },
   { icon: CheckSquare, label: "المهام", to: "/tasks" },
   { icon: Calendar, label: "المواعيد", to: "/tasks" },
   { icon: Receipt, label: "الفواتير" },
