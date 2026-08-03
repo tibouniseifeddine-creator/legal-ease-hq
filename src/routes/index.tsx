@@ -19,7 +19,7 @@ export const Route = createFileRoute("/")({
 const navItems: Array<{ icon: typeof Home; label: string; active?: boolean; to?: string }> = [
   { icon: Home, label: "لوحة التحكم", active: true },
   { icon: Users, label: "العملاء", to: "/clients" },
-  { icon: Building2, label: "العقارات" },
+  { icon: Building2, label: "العقارات", to: "/properties" },
   { icon: FileText, label: "العقود" },
   { icon: FolderClosed, label: "الوثائق" },
   { icon: CheckSquare, label: "المهام" },
