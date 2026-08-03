@@ -16,9 +16,9 @@ export const Route = createFileRoute("/")({
   component: Dashboard,
 });
 
-const navItems = [
+const navItems: Array<{ icon: typeof Home; label: string; active?: boolean; to?: string }> = [
   { icon: Home, label: "لوحة التحكم", active: true },
-  { icon: Users, label: "العملاء" },
+  { icon: Users, label: "العملاء", to: "/clients" },
   { icon: Building2, label: "العقارات" },
   { icon: FileText, label: "العقود" },
   { icon: FolderClosed, label: "الوثائق" },
@@ -96,20 +96,29 @@ function Dashboard() {
         </div>
 
         <nav className="flex-1 p-3 space-y-1">
-          {navItems.map((item) => (
-            <button
-              key={item.label}
-              className={[
-                "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
-                item.active
-                  ? "bg-gold text-gold-foreground shadow-sm"
-                  : "text-white/80 hover:bg-white/5 hover:text-white",
-              ].join(" ")}
-            >
-              <item.icon className="w-5 h-5" />
-              <span>{item.label}</span>
-            </button>
-          ))}
+          {navItems.map((item) => {
+            const cls = [
+              "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
+              item.active
+                ? "bg-gold text-gold-foreground shadow-sm"
+                : "text-white/80 hover:bg-white/5 hover:text-white",
+            ].join(" ");
+            const inner = (
+              <>
+                <item.icon className="w-5 h-5" />
+                <span>{item.label}</span>
+              </>
+            );
+            return item.to ? (
+              <Link key={item.label} to={item.to} className={cls}>
+                {inner}
+              </Link>
+            ) : (
+              <button key={item.label} className={cls}>
+                {inner}
+              </button>
+            );
+          })}
         </nav>
 
         <div className="m-3 p-4 rounded-2xl bg-white/5 border border-white/10">
