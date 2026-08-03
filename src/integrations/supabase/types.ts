@@ -251,6 +251,63 @@ export type Database = {
           },
         ]
       }
+      tasks: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          due_at: string | null
+          id: string
+          is_done: boolean
+          notes: string | null
+          organization_id: string
+          task_type: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_at?: string | null
+          id?: string
+          is_done?: boolean
+          notes?: string | null
+          organization_id: string
+          task_type?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_at?: string | null
+          id?: string
+          is_done?: boolean
+          notes?: string | null
+          organization_id?: string
+          task_type?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
