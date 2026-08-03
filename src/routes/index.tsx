@@ -1,15 +1,18 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Home, Users, Building2, FileText, FolderClosed, CheckSquare,
   Calendar, Receipt, BarChart3, Settings, Search, Bell, Mail,
   Menu, Plus, FolderOpen, MoreVertical, ChevronLeft, Sparkles,
   AlertTriangle, ClipboardList, FilePlus, Building, UploadCloud,
-  HomeIcon, StickyNote, CalendarPlus, Bot, Brain, ScanSearch,
+  HomeIcon, StickyNote, CalendarPlus, Bot, Brain, ScanSearch, LogOut,
 } from "lucide-react";
 import heroImg from "@/assets/hero-handshake.jpg";
 import robotImg from "@/assets/ai-robot.png";
+import { supabase } from "@/integrations/supabase/client";
+import { requireOrgSession } from "@/lib/require-org-session";
 
 export const Route = createFileRoute("/")({
+  beforeLoad: requireOrgSession,
   component: Dashboard,
 });
 
@@ -63,6 +66,19 @@ const quickActions: Array<{ icon: typeof FilePlus; label: string; to?: string; h
 ];
 
 function Dashboard() {
+  const { user, organization } = Route.useRouteContext();
+  const navigate = useNavigate();
+  const displayName =
+    (typeof user.user_metadata?.full_name === "string" && user.user_metadata.full_name.trim()) ||
+    user.email ||
+    "مستخدم";
+  const initials = displayName.trim().charAt(0) || "؟";
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate({ to: "/login" });
+  };
+
   return (
     <div className="min-h-screen bg-background flex" dir="rtl">
       {/* Sidebar */}
@@ -137,10 +153,17 @@ function Dashboard() {
               </button>
               <div className="flex items-center gap-3 pr-2 border-r border-border">
                 <div className="text-right leading-tight">
-                  <div className="text-sm font-bold">سيف الدين</div>
-                  <div className="text-xs text-muted-foreground">موثق</div>
+                  <div className="text-sm font-bold">{displayName}</div>
+                  <div className="text-xs text-muted-foreground">{organization.name}</div>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-navy text-navy-foreground flex items-center justify-center font-bold">س</div>
+                <div className="w-10 h-10 rounded-full bg-navy text-navy-foreground flex items-center justify-center font-bold">{initials}</div>
+                <button
+                  onClick={handleSignOut}
+                  title="تسجيل الخروج"
+                  className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-red-600 transition"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
               </div>
             </div>
           </div>
@@ -153,7 +176,7 @@ function Dashboard() {
             <div className="grid md:grid-cols-2 items-center">
               <div className="p-8 md:p-10 z-10">
                 <h1 className="text-3xl md:text-4xl font-extrabold text-navy leading-tight">
-                  <span className="inline-block">مرحبًا بك،</span> سيف الدين <span>👋</span>
+                  <span className="inline-block">مرحبًا بك،</span> {displayName} <span>👋</span>
                 </h1>
                 <p className="mt-3 text-muted-foreground max-w-md">
                   منصتك الذكية لإدارة العملاء والعقود والوثائق في مكان واحد
