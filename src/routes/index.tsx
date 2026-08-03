@@ -24,7 +24,7 @@ const navItems: Array<{ icon: typeof Home; label: string; active?: boolean; to?:
   { icon: FolderClosed, label: "الوثائق", to: "/documents" },
   { icon: CheckSquare, label: "المهام", to: "/tasks" },
   { icon: Calendar, label: "المواعيد", to: "/tasks" },
-  { icon: Receipt, label: "الفواتير" },
+  { icon: Receipt, label: "الفواتير", to: "/invoices" },
   { icon: BarChart3, label: "التقارير" },
   { icon: Settings, label: "الإعدادات" },
 ];
