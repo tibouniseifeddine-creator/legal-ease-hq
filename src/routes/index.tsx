@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import {
   Home, Users, Building2, FileText, FolderClosed, CheckSquare,
   Calendar, Receipt, BarChart3, Settings, Search, Bell, Mail,
@@ -11,8 +12,71 @@ import robotImg from "@/assets/ai-robot.png";
 import { supabase } from "@/integrations/supabase/client";
 import { requireOrgSession } from "@/lib/require-org-session";
 
+type DashboardAlert = { id: string; dot: string; title: string; subtitle: string };
+
+function alertsQueryOptions(organizationId: string) {
+  return {
+    queryKey: ["dashboard-alerts", organizationId],
+    queryFn: async (): Promise<DashboardAlert[]> => {
+      const today = new Date();
+      const todayDateStr = today.toISOString().slice(0, 10);
+      const todayStart = new Date(today);
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date(today);
+      todayEnd.setHours(23, 59, 59, 999);
+
+      const [overdueRes, appointmentsRes] = await Promise.all([
+        supabase
+          .from("invoices")
+          .select("id, title, due_date")
+          .eq("organization_id", organizationId)
+          .in("status", ["unpaid", "overdue"])
+          .lt("due_date", todayDateStr)
+          .order("due_date", { ascending: true })
+          .limit(5),
+        supabase
+          .from("tasks")
+          .select("id, title, due_at")
+          .eq("organization_id", organizationId)
+          .eq("task_type", "appointment")
+          .gte("due_at", todayStart.toISOString())
+          .lte("due_at", todayEnd.toISOString())
+          .order("due_at", { ascending: true })
+          .limit(5),
+      ]);
+      if (overdueRes.error) throw overdueRes.error;
+      if (appointmentsRes.error) throw appointmentsRes.error;
+
+      const result: DashboardAlert[] = [];
+      for (const inv of overdueRes.data ?? []) {
+        result.push({
+          id: `inv-${inv.id}`,
+          dot: "bg-red-500",
+          title: inv.title,
+          subtitle: `فاتورة متأخرة — استحقاقها ${inv.due_date}`,
+        });
+      }
+      for (const t of appointmentsRes.data ?? []) {
+        const time = t.due_at
+          ? new Date(t.due_at).toLocaleTimeString("ar-DZ", { hour: "2-digit", minute: "2-digit" })
+          : "";
+        result.push({
+          id: `task-${t.id}`,
+          dot: "bg-sky-500",
+          title: t.title,
+          subtitle: time ? `موعد اليوم ${time}` : "موعد اليوم",
+        });
+      }
+      return result;
+    },
+  };
+}
+
 export const Route = createFileRoute("/")({
   beforeLoad: requireOrgSession,
+  loader: async ({ context }) => {
+    await context.queryClient.ensureQueryData(alertsQueryOptions(context.organization.id));
+  },
   component: Dashboard,
 });
 
@@ -25,7 +89,7 @@ const navItems: Array<{ icon: typeof Home; label: string; active?: boolean; to?:
   { icon: CheckSquare, label: "المهام", to: "/tasks" },
   { icon: Calendar, label: "المواعيد", to: "/tasks" },
   { icon: Receipt, label: "الفواتير", to: "/invoices" },
-  { icon: BarChart3, label: "التقارير" },
+  { icon: BarChart3, label: "التقارير", to: "/reports" },
   { icon: Settings, label: "الإعدادات" },
 ];
 
@@ -50,24 +114,19 @@ const contracts = [
   { name: "بيع أرض فلاحية", type: "بيع", date: "2024/05/17", status: "مكتمل", statusClass: "bg-emerald-100 text-emerald-700" },
 ];
 
-const alerts = [
-  { dot: "bg-red-500", title: "عقد بيع شقة في الجزائر", subtitle: "ينقصه بند طريقة الدفع" },
-  { dot: "bg-amber-500", title: "وثيقة هوية منتهية الصلاحية", subtitle: "لدى العميل أحمد بن علي" },
-  { dot: "bg-sky-500", title: "موعد اليوم 11:00 ص", subtitle: "مع العميل فاطمة الزهراء" },
-];
-
 const quickActions: Array<{ icon: typeof FilePlus; label: string; to?: string; highlight?: boolean }> = [
   { icon: ScanSearch, label: "مراجعة عقد بالذكاء", to: "/contract-review", highlight: true },
-  { icon: FilePlus, label: "إنشاء عقد بيع" },
-  { icon: Building, label: "إنشاء عقد إيجار" },
-  { icon: UploadCloud, label: "رفع وثيقة" },
-  { icon: HomeIcon, label: "أضف عقار" },
-  { icon: CalendarPlus, label: "موعد جديد" },
+  { icon: FilePlus, label: "إنشاء عقد بيع", to: "/contracts" },
+  { icon: Building, label: "إنشاء عقد إيجار", to: "/contracts" },
+  { icon: UploadCloud, label: "رفع وثيقة", to: "/documents" },
+  { icon: HomeIcon, label: "أضف عقار", to: "/properties" },
+  { icon: CalendarPlus, label: "موعد جديد", to: "/tasks" },
 ];
 
 function Dashboard() {
   const { user, organization } = Route.useRouteContext();
   const navigate = useNavigate();
+  const { data: alerts } = useSuspenseQuery(alertsQueryOptions(organization.id));
   const displayName =
     (typeof user.user_metadata?.full_name === "string" && user.user_metadata.full_name.trim()) ||
     user.email ||
@@ -191,15 +250,15 @@ function Dashboard() {
                   منصتك الذكية لإدارة العملاء والعقود والوثائق في مكان واحد
                 </p>
                 <div className="mt-6 flex flex-wrap gap-3">
-                  <button className="inline-flex items-center gap-2 bg-gold text-gold-foreground rounded-xl px-5 py-3 text-sm font-semibold hover:brightness-95 transition shadow-sm">
+                  <Link to="/contracts" className="inline-flex items-center gap-2 bg-gold text-gold-foreground rounded-xl px-5 py-3 text-sm font-semibold hover:brightness-95 transition shadow-sm">
                     <Plus className="w-4 h-4" /> عقد جديد
-                  </button>
-                  <button className="inline-flex items-center gap-2 bg-navy text-navy-foreground rounded-xl px-5 py-3 text-sm font-semibold hover:brightness-110 transition">
+                  </Link>
+                  <Link to="/clients" className="inline-flex items-center gap-2 bg-navy text-navy-foreground rounded-xl px-5 py-3 text-sm font-semibold hover:brightness-110 transition">
                     <Plus className="w-4 h-4" /> عميل جديد
-                  </button>
-                  <button className="inline-flex items-center gap-2 bg-background border border-border rounded-xl px-5 py-3 text-sm font-semibold hover:bg-muted transition">
+                  </Link>
+                  <Link to="/clients" className="inline-flex items-center gap-2 bg-background border border-border rounded-xl px-5 py-3 text-sm font-semibold hover:bg-muted transition">
                     <FolderOpen className="w-4 h-4" /> فتح عميل
-                  </button>
+                  </Link>
                 </div>
               </div>
               <div className="relative h-56 md:h-72">
@@ -354,28 +413,28 @@ function Dashboard() {
                       NexLaw AI
                     </div>
                     <p className="text-xs text-white/70 mt-2 max-w-[10rem]">
-                      لديك 3 تنبيهات تحتاج إلي انتباهك
+                      {alerts.length > 0
+                        ? `لديك ${alerts.length} تنبيهات تحتاج إلى انتباهك`
+                        : "لا توجد تنبيهات تحتاج انتباهك الآن"}
                     </p>
                   </div>
                   <img src={robotImg} alt="AI" width={80} height={80} className="w-20 h-20 object-contain -mt-2 -ml-2" loading="lazy" />
                 </div>
 
-                <div className="space-y-2 mt-4">
-                  {alerts.map((a) => (
-                    <button key={a.title} className="w-full flex items-center gap-3 bg-white/5 hover:bg-white/10 transition rounded-xl p-3 text-right">
-                      <ChevronLeft className="w-4 h-4 text-white/60 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-semibold truncate">{a.title}</div>
-                        <div className="text-[11px] text-white/60 truncate mt-0.5">{a.subtitle}</div>
+                {alerts.length > 0 && (
+                  <div className="space-y-2 mt-4">
+                    {alerts.map((a) => (
+                      <div key={a.id} className="w-full flex items-center gap-3 bg-white/5 rounded-xl p-3 text-right">
+                        <ChevronLeft className="w-4 h-4 text-white/60 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-semibold truncate">{a.title}</div>
+                          <div className="text-[11px] text-white/60 truncate mt-0.5">{a.subtitle}</div>
+                        </div>
+                        <span className={`w-2 h-2 rounded-full ${a.dot} shrink-0`} />
                       </div>
-                      <span className={`w-2 h-2 rounded-full ${a.dot} shrink-0`} />
-                    </button>
-                  ))}
-                </div>
-
-                <button className="w-full mt-4 bg-gold text-gold-foreground font-semibold text-sm rounded-xl py-2.5 hover:brightness-95 transition">
-                  عرض جميع التنبيهات
-                </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="bg-card rounded-2xl border border-border p-5">
