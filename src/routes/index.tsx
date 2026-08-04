@@ -209,7 +209,7 @@ const navItems: Array<{ icon: typeof Home; label: string; active?: boolean; to?:
   { icon: Calendar, label: "المواعيد", to: "/tasks" },
   { icon: Receipt, label: "الفواتير", to: "/invoices" },
   { icon: BarChart3, label: "التقارير", to: "/reports" },
-  { icon: Settings, label: "الإعدادات" },
+  { icon: Settings, label: "الإعدادات", to: "/settings" },
 ];
 
 const statMeta = [
