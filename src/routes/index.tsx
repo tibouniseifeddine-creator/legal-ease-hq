@@ -303,9 +303,12 @@ function Dashboard() {
           <p className="text-xs text-white/70 leading-relaxed mb-3">
             مساعدك الذكي لإنجاز الأعمال القانونية بسرعة ودقة
           </p>
-          <button className="w-full bg-gold text-gold-foreground rounded-lg py-2 text-xs font-semibold hover:brightness-95 transition">
-            تحدث مع الذكاء الاصطناعي
-          </button>
+          <Link
+  to="/assistant"
+  className="w-full inline-flex items-center justify-center bg-gold text-gold-foreground rounded-lg py-2 text-xs font-semibold hover:brightness-95 transition"
+>
+  تحدث مع الذكاء الاصطناعي
+</Link>
         </div>
       </aside>
 
