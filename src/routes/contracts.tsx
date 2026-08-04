@@ -11,7 +11,7 @@ import robotImg from "@/assets/ai-robot.png";
 import { supabase } from "@/integrations/supabase/client";
 import { requireOrgSession } from "@/lib/require-org-session";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/contracts")({
   beforeLoad: requireOrgSession,
   component: Dashboard,
 });
