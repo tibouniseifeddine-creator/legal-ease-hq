@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowRight, Plus, FileText, Loader2, X, AlertCircle, Wand2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { requireOrgSession } from "@/lib/require-org-session";
@@ -88,18 +88,20 @@ function generateContractText(params: {
   type: string;
   officeName: string;
   clientName: string;
+  clientNationalId: string;
   propertyTitle: string;
   propertyAddress: string;
   propertyArea: number | null;
   price: number | null;
   date: string;
 }): string {
-  const { type, officeName, clientName, propertyTitle, propertyAddress, propertyArea, price, date } = params;
+  const { type, officeName, clientName, clientNationalId, propertyTitle, propertyAddress, propertyArea, price, date } = params;
   const areaText = propertyArea ? `بمساحة ${propertyArea} متر مربع، ` : "";
   const priceText = price ? `${price.toLocaleString("ar-DZ")} دج` : "[المبلغ]";
   const addressText = propertyAddress || "[العنوان]";
   const propTitle = propertyTitle || "[العقار]";
-  const client = clientName || "[اسم الطرف الثاني]";
+  const clientBase = clientName || "[اسم الطرف الثاني]";
+  const client = clientNationalId ? `${clientBase}، حامل بطاقة التعريف الوطنية رقم ${clientNationalId}` : clientBase;
   const office = officeName || "[اسم المكتب]";
 
   if (type === "rental") {
@@ -191,7 +193,11 @@ function ContractsPage() {
             clients={clients}
             properties={properties}
             onDone={() => setShowForm(false)}
-            onCreated={() => queryClient.invalidateQueries({ queryKey: ["contracts", organization.id] })}
+            onCreated={() => {
+              queryClient.invalidateQueries({ queryKey: ["contracts", organization.id] });
+              queryClient.invalidateQueries({ queryKey: ["clients-list", organization.id] });
+              queryClient.invalidateQueries({ queryKey: ["properties-list", organization.id] });
+            }}
           />
         )}
 
@@ -258,10 +264,26 @@ function NewContractForm({
   const [status, setStatus] = useState("draft");
   const [clientId, setClientId] = useState("");
   const [propertyId, setPropertyId] = useState("");
+  const [clientNationalId, setClientNationalId] = useState("");
+  const [clientPhone, setClientPhone] = useState("");
+  const [propertyPrice, setPropertyPrice] = useState("");
+  const [propertyArea, setPropertyArea] = useState("");
   const [contractDate, setContractDate] = useState(today);
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const client = clients.find((c) => c.id === clientId);
+    setClientNationalId(client?.national_id ?? "");
+    setClientPhone(client?.phone ?? "");
+  }, [clientId, clients]);
+
+  useEffect(() => {
+    const property = properties.find((p) => p.id === propertyId);
+    setPropertyPrice(property?.price != null ? String(property.price) : "");
+    setPropertyArea(property?.area != null ? String(property.area) : "");
+  }, [propertyId, properties]);
 
   const handleGenerate = () => {
     const client = clients.find((c) => c.id === clientId);
@@ -270,10 +292,11 @@ function NewContractForm({
       type: contractType,
       officeName: organizationName,
       clientName: client?.full_name ?? "",
+      clientNationalId: clientNationalId.trim(),
       propertyTitle: property?.title ?? "",
       propertyAddress: property ? [property.address, property.city].filter(Boolean).join("، ") : "",
-      propertyArea: property?.area ?? null,
-      price: property?.price ?? null,
+      propertyArea: propertyArea.trim() ? Number(propertyArea) : null,
+      price: propertyPrice.trim() ? Number(propertyPrice) : null,
       date: contractDate,
     });
     setContent(text);
@@ -299,13 +322,38 @@ function NewContractForm({
     };
 
     const { error: insertError } = await supabase.from("contracts").insert(payload);
-    setLoading(false);
 
     if (insertError) {
+      setLoading(false);
       setError(insertError.message);
       return;
     }
 
+    if (clientId) {
+      const original = clients.find((c) => c.id === clientId);
+      const newNationalId = clientNationalId.trim() || null;
+      const newPhone = clientPhone.trim() || null;
+      if (original && (newNationalId !== (original.national_id ?? null) || newPhone !== (original.phone ?? null))) {
+        await supabase
+          .from("clients")
+          .update({ national_id: newNationalId, phone: newPhone })
+          .eq("id", clientId);
+      }
+    }
+
+    if (propertyId) {
+      const original = properties.find((p) => p.id === propertyId);
+      const newPrice = propertyPrice.trim() ? Number(propertyPrice) : null;
+      const newArea = propertyArea.trim() ? Number(propertyArea) : null;
+      if (original && (newPrice !== original.price || newArea !== original.area)) {
+        await supabase
+          .from("properties")
+          .update({ price: newPrice, area: newArea })
+          .eq("id", propertyId);
+      }
+    }
+
+    setLoading(false);
     onCreated();
     onDone();
   };
@@ -367,6 +415,19 @@ function NewContractForm({
             ))}
           </select>
         </div>
+
+        {clientId && (
+          <>
+            <Field label="رقم هوية العميل" value={clientNationalId} onChange={setClientNationalId} placeholder="يُحفظ في سجل العميل عند التعديل" />
+            <Field label="هاتف العميل" value={clientPhone} onChange={setClientPhone} />
+          </>
+        )}
+        {propertyId && (
+          <>
+            <Field label="سعر العقار (دج)" value={propertyPrice} onChange={setPropertyPrice} type="number" />
+            <Field label="مساحة العقار (م²)" value={propertyArea} onChange={setPropertyArea} type="number" />
+          </>
+        )}
       </div>
 
       <div>
