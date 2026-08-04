@@ -314,6 +314,50 @@ export type Database = {
           },
         ]
       }
+      organization_invites: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          organization_id: string
+          role: string
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          organization_id: string
+          role?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          organization_id?: string
+          role?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_invites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           created_at: string
@@ -511,6 +555,25 @@ export type Database = {
         }
       }
       is_org_member: { Args: { org_id: string }; Returns: boolean }
+      list_org_members: {
+        Args: { org_id: string }
+        Returns: {
+          membership_id: string
+          user_id: string
+          role: string
+          email: string
+          joined_at: string
+        }[]
+      }
+      redeem_invite: {
+        Args: { invite_code: string }
+        Returns: {
+          created_at: string
+          id: string
+          name: string
+          plan: string
+        }
+      }
       set_updated_at: { Args: Record<PropertyKey, never>; Returns: unknown }
     }
     Enums: {
