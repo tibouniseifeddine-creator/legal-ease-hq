@@ -25,12 +25,42 @@ function myRoleQueryOptions(organizationId: string, userId: string) {
   };
 }
 
+type OrgMember = { membership_id: string; user_id: string; role: string; email: string; joined_at: string };
+
+function orgMembersQueryOptions(organizationId: string) {
+  return {
+    queryKey: ["org-members", organizationId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("list_org_members", { org_id: organizationId });
+      if (error) throw error;
+      return (data ?? []) as OrgMember[];
+    },
+  };
+}
+
+function orgInvitesQueryOptions(organizationId: string) {
+  return {
+    queryKey: ["org-invites", organizationId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("organization_invites")
+        .select("*")
+        .eq("organization_id", organizationId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  };
+}
+
 export const Route = createFileRoute("/settings")({
   beforeLoad: requireOrgSession,
   loader: async ({ context }) => {
-    await context.queryClient.ensureQueryData(
-      myRoleQueryOptions(context.organization.id, context.user.id),
-    );
+    await Promise.all([
+      context.queryClient.ensureQueryData(myRoleQueryOptions(context.organization.id, context.user.id)),
+      context.queryClient.ensureQueryData(orgMembersQueryOptions(context.organization.id)),
+      context.queryClient.ensureQueryData(orgInvitesQueryOptions(context.organization.id)),
+    ]);
   },
   head: () => ({
     meta: [{ title: "الإعدادات — NexLaw" }],
@@ -43,15 +73,36 @@ function SettingsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: role } = useSuspenseQuery(myRoleQueryOptions(organization.id, user.id));
+  const { data: members } = useSuspenseQuery(orgMembersQueryOptions(organization.id));
+  const { data: invites } = useSuspenseQuery(orgInvitesQueryOptions(organization.id));
   const canEditOrg = role === "owner" || role === "admin";
 
   const [orgName, setOrgName] = useState(organization.name);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [creatingInvite, setCreatingInvite] = useState(false);
 
   const displayName =
     (typeof user.user_metadata?.full_name === "string" && user.user_metadata.full_name.trim()) || "";
+
+  const handleCreateInvite = async (inviteRole: "admin" | "member") => {
+    setCreatingInvite(true);
+    const code = crypto.randomUUID().replace(/-/g, "");
+    await supabase.from("organization_invites").insert({
+      organization_id: organization.id,
+      code,
+      role: inviteRole,
+      created_by: user.id,
+    });
+    setCreatingInvite(false);
+    queryClient.invalidateQueries({ queryKey: ["org-invites", organization.id] });
+  };
+
+  const handleDeactivateInvite = async (inviteId: string) => {
+    await supabase.from("organization_invites").update({ is_active: false }).eq("id", inviteId);
+    queryClient.invalidateQueries({ queryKey: ["org-invites", organization.id] });
+  };
 
   const handleSaveOrgName = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,6 +204,70 @@ function SettingsPage() {
             <div className="text-sm font-semibold text-navy">الخطة الحالية</div>
             <div className="mt-1 text-sm text-muted-foreground">{PLAN_LABELS[organization.plan] ?? organization.plan}</div>
           </div>
+        </section>
+
+        <section className="bg-card rounded-2xl border border-border p-6">
+          <h2 className="font-bold text-navy mb-4">الفريق</h2>
+
+          <ul className="divide-y divide-border -mx-6">
+            {members.map((m) => (
+              <li key={m.membership_id} className="px-6 py-3 flex items-center justify-between text-sm">
+                <span className="font-medium">{m.email}</span>
+                <span className="text-xs text-muted-foreground">
+                  {m.role === "owner" ? "مالك" : m.role === "admin" ? "مدير" : "عضو"}
+                </span>
+              </li>
+            ))}
+          </ul>
+
+          {canEditOrg && (
+            <div className="mt-5 pt-5 border-t border-border space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-navy">دعوة عضو جديد</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleCreateInvite("member")}
+                    disabled={creatingInvite}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-muted hover:bg-accent disabled:opacity-50"
+                  >
+                    كعضو
+                  </button>
+                  <button
+                    onClick={() => handleCreateInvite("admin")}
+                    disabled={creatingInvite}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-muted hover:bg-accent disabled:opacity-50"
+                  >
+                    كمدير
+                  </button>
+                </div>
+              </div>
+
+              {invites.filter((i) => i.is_active).length > 0 && (
+                <ul className="space-y-2">
+                  {invites.filter((i) => i.is_active).map((inv) => (
+                    <li key={inv.id} className="flex items-center gap-2 text-xs bg-muted/60 rounded-lg p-2.5">
+                      <span className="flex-1 truncate font-mono text-muted-foreground">
+                        {window.location.origin}/join/{inv.code}
+                      </span>
+                      <span className="shrink-0 text-muted-foreground">
+                        {inv.role === "admin" ? "مدير" : "عضو"}
+                      </span>
+                      <button
+                        onClick={() => handleDeactivateInvite(inv.id)}
+                        className="shrink-0 font-semibold text-red-600 hover:underline"
+                      >
+                        إلغاء
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <p className="text-xs text-muted-foreground">
+                شارك رابط الدعوة يدويًا (واتساب، بريد...). لا تنتهي صلاحيته، ويُستخدم مرة واحدة فقط — يمكنك إلغاؤه في أي وقت.
+              </p>
+            </div>
+          )}
         </section>
 
         <section className="bg-card rounded-2xl border border-border p-6">
