@@ -1,145 +1,205 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Receipt, Plus, X, Loader2, AlertCircle } from "lucide-react";
+import { ArrowRight, Plus, CalendarCheck, Loader2, X, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { requireOrgSession } from "@/lib/require-org-session";
 import { Field } from "@/components/Field";
-import { AppShell, EmptyState } from "@/components/AppShell";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 
-type Invoice = Tables<"invoices">;
+type Task = Tables<"tasks">;
+type Client = Tables<"clients">;
 
-const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
-  draft: { label: "مسودة", cls: "bg-muted text-muted-foreground" },
-  sent: { label: "مُرسلة", cls: "bg-sky-100 text-sky-700" },
-  paid: { label: "مدفوعة", cls: "bg-emerald-100 text-emerald-700" },
-  overdue: { label: "متأخرة", cls: "bg-red-100 text-red-700" },
-};
-
-function invoicesQueryOptions(organizationId: string) {
+function tasksQueryOptions(organizationId: string) {
   return {
-    queryKey: ["invoices", organizationId],
+    queryKey: ["tasks", organizationId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("invoices")
+        .from("tasks")
         .select("*")
         .eq("organization_id", organizationId)
+        .order("due_at", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as Invoice[];
+      return (data ?? []) as Task[];
     },
   };
 }
 
-export const Route = createFileRoute("/invoices")({
+function clientsListQueryOptions(organizationId: string) {
+  return {
+    queryKey: ["clients-list", organizationId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("*")
+        .eq("organization_id", organizationId)
+        .order("full_name", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as Client[];
+    },
+  };
+}
+
+export const Route = createFileRoute("/tasks")({
   beforeLoad: requireOrgSession,
   loader: async ({ context }) => {
-    await context.queryClient.ensureQueryData(invoicesQueryOptions(context.organization.id));
+    await Promise.all([
+      context.queryClient.ensureQueryData(tasksQueryOptions(context.organization.id)),
+      context.queryClient.ensureQueryData(clientsListQueryOptions(context.organization.id)),
+    ]);
   },
   head: () => ({
-    meta: [
-      { title: "الفواتير — NexLaw" },
-      { name: "description", content: "تابع فواتير مكتبك ومدفوعات عملائك." },
-      { property: "og:title", content: "الفواتير — NexLaw" },
-      { property: "og:description", content: "تابع فواتير مكتبك ومدفوعات عملائك." },
-    ],
+    meta: [{ title: "المهام والمواعيد — NexLaw" }],
   }),
-  component: InvoicesPage,
+  component: TasksPage,
 });
 
-function InvoicesPage() {
-  const { user, organization } = Route.useRouteContext();
-  const queryClient = useQueryClient();
-  const { data: invoices } = useSuspenseQuery(invoicesQueryOptions(organization.id));
-  const [showForm, setShowForm] = useState(false);
+function formatDueAt(value: string | null) {
+  if (!value) return null;
+  const d = new Date(value);
+  return d.toLocaleString("ar-DZ", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
 
-  const total = invoices.reduce((sum, i) => sum + Number(i.amount || 0), 0);
-  const paid = invoices.filter((i) => i.status === "paid").reduce((s, i) => s + Number(i.amount || 0), 0);
+function TasksPage() {
+  const { organization } = Route.useRouteContext();
+  const queryClient = useQueryClient();
+  const { data: tasks } = useSuspenseQuery(tasksQueryOptions(organization.id));
+  const { data: clients } = useSuspenseQuery(clientsListQueryOptions(organization.id));
+  const [showForm, setShowForm] = useState(false);
+  const [filter, setFilter] = useState<"all" | "task" | "appointment">("all");
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["tasks", organization.id] });
+
+  const toggleDone = async (task: Task) => {
+    await supabase.from("tasks").update({ is_done: !task.is_done }).eq("id", task.id);
+    invalidate();
+  };
+
+  const filtered = tasks.filter((t) => filter === "all" || t.task_type === filter);
 
   return (
-    <AppShell user={user} organization={organization} title="الفواتير" subtitle={`${invoices.length} فاتورة`}>
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div className="grid sm:grid-cols-3 gap-4">
-          <SummaryCard label="إجمالي الفواتير" value={total} />
-          <SummaryCard label="المحصّل" value={paid} />
-          <SummaryCard label="المتبقي" value={total - paid} />
+    <div className="min-h-screen bg-background" dir="rtl">
+      <header className="sticky top-0 z-10 bg-background/85 backdrop-blur border-b border-border">
+        <div className="max-w-4xl mx-auto flex items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gold flex items-center justify-center">
+              <CalendarCheck className="w-5 h-5 text-gold-foreground" />
+            </div>
+            <div>
+              <div className="font-bold text-navy">المهام والمواعيد</div>
+              <div className="text-xs text-muted-foreground">{organization.name}</div>
+            </div>
+          </div>
+          <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-navy">
+            العودة للوحة التحكم
+            <ArrowRight className="w-4 h-4" />
+          </Link>
         </div>
+      </header>
 
-        <div className="flex justify-end">
+      <main className="max-w-4xl mx-auto p-6 space-y-6">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-2 bg-muted/60 rounded-xl p-1">
+            {[
+              { value: "all", label: "الكل" },
+              { value: "task", label: "المهام" },
+              { value: "appointment", label: "المواعيد" },
+            ].map((f) => (
+              <button
+                key={f.value}
+                onClick={() => setFilter(f.value as typeof filter)}
+                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition ${
+                  filter === f.value ? "bg-card shadow-sm text-navy" : "text-muted-foreground"
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
           <button
             onClick={() => setShowForm((v) => !v)}
             className="inline-flex items-center gap-2 bg-gold text-gold-foreground rounded-xl px-4 py-2.5 text-sm font-bold hover:brightness-95 transition"
           >
             {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-            {showForm ? "إلغاء" : "فاتورة جديدة"}
+            {showForm ? "إلغاء" : "إضافة جديد"}
           </button>
         </div>
 
         {showForm && (
-          <NewInvoiceForm
+          <NewTaskForm
             organizationId={organization.id}
+            clients={clients}
             onDone={() => setShowForm(false)}
-            onCreated={() => queryClient.invalidateQueries({ queryKey: ["invoices", organization.id] })}
+            onCreated={invalidate}
           />
         )}
 
         <div className="bg-card rounded-2xl border border-border overflow-hidden">
-          {invoices.length === 0 ? (
-            <EmptyState icon={Receipt} title="لا توجد فواتير بعد" hint='اضغط "فاتورة جديدة" لإنشاء أول فاتورة.' />
+          {filtered.length === 0 ? (
+            <div className="p-10 text-center">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-50 flex items-center justify-center">
+                <CalendarCheck className="w-7 h-7 text-gold" />
+              </div>
+              <h2 className="mt-4 font-bold text-navy text-lg">لا يوجد شيء هنا بعد</h2>
+              <p className="mt-2 text-sm text-muted-foreground">اضغط "إضافة جديد" لإنشاء أول مهمة أو موعد.</p>
+            </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs text-muted-foreground bg-muted/40">
-                  <th className="text-right font-medium px-5 py-3">الفاتورة</th>
-                  <th className="text-right font-medium px-5 py-3">المبلغ</th>
-                  <th className="text-right font-medium px-5 py-3">تاريخ الاستحقاق</th>
-                  <th className="text-right font-medium px-5 py-3">الحالة</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoices.map((i) => {
-                  const st = STATUS_LABELS[i.status] ?? STATUS_LABELS.draft;
-                  return (
-                    <tr key={i.id} className="border-t border-border">
-                      <td className="px-5 py-3 font-medium">{i.title}</td>
-                      <td className="px-5 py-3 text-muted-foreground tabular-nums">
-                        {Number(i.amount).toLocaleString("ar-DZ")} دج
-                      </td>
-                      <td className="px-5 py-3 text-muted-foreground tabular-nums">{i.due_date || "—"}</td>
-                      <td className="px-5 py-3">
-                        <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-md ${st.cls}`}>{st.label}</span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <ul className="divide-y divide-border">
+              {filtered.map((t) => {
+                const client = clients.find((c) => c.id === t.client_id);
+                const due = formatDueAt(t.due_at);
+                return (
+                  <li key={t.id} className="p-4 flex items-center gap-3">
+                    {t.task_type === "task" ? (
+                      <input
+                        type="checkbox"
+                        checked={t.is_done}
+                        onChange={() => toggleDone(t)}
+                        className="accent-[color:var(--gold)] w-4 h-4 shrink-0"
+                      />
+                    ) : (
+                      <span className="w-2 h-2 rounded-full bg-sky-500 shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-sm font-medium ${t.is_done ? "line-through text-muted-foreground" : ""}`}>
+                        {t.title}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
+                        {due && <span className="tabular-nums">{due}</span>}
+                        {client && <span>· {client.full_name}</span>}
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-semibold px-2 py-1 rounded-md bg-muted text-muted-foreground shrink-0">
+                      {t.task_type === "task" ? "مهمة" : "موعد"}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
-      </div>
-    </AppShell>
-  );
-}
-
-function SummaryCard({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="bg-card rounded-2xl border border-border p-5">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="mt-2 text-2xl font-bold text-navy tabular-nums">
-        {value.toLocaleString("ar-DZ")} <span className="text-sm font-semibold">دج</span>
-      </div>
+      </main>
     </div>
   );
 }
 
-function NewInvoiceForm({
-  organizationId, onDone, onCreated,
-}: { organizationId: string; onDone: () => void; onCreated: () => void }) {
+function NewTaskForm({
+  organizationId,
+  clients,
+  onDone,
+  onCreated,
+}: {
+  organizationId: string;
+  clients: Client[];
+  onDone: () => void;
+  onCreated: () => void;
+}) {
   const [title, setTitle] = useState("");
-  const [amount, setAmount] = useState("");
-  const [status, setStatus] = useState("draft");
-  const [dueDate, setDueDate] = useState("");
+  const [taskType, setTaskType] = useState<"task" | "appointment">("task");
+  const [dueAt, setDueAt] = useState("");
+  const [clientId, setClientId] = useState("");
+  const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -147,55 +207,75 @@ function NewInvoiceForm({
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const { error: insertError } = await supabase.from("invoices").insert({
+
+    const payload: TablesInsert<"tasks"> = {
       organization_id: organizationId,
       title: title.trim(),
-      amount: Number(amount || 0),
-      status,
-      due_date: dueDate || null,
-    });
+      task_type: taskType,
+      due_at: dueAt ? new Date(dueAt).toISOString() : null,
+      client_id: clientId || null,
+      notes: notes.trim() || null,
+    };
+
+    const { error: insertError } = await supabase.from("tasks").insert(payload);
     setLoading(false);
-    if (insertError) { setError(insertError.message); return; }
+
+    if (insertError) {
+      setError(insertError.message);
+      return;
+    }
+
     onCreated();
     onDone();
   };
 
   return (
     <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-border p-6 space-y-4">
-      <h2 className="font-bold text-navy">فاتورة جديدة</h2>
+      <h2 className="font-bold text-navy">إضافة جديد</h2>
+
       <div className="grid sm:grid-cols-2 gap-4">
+        <Field label="العنوان" value={title} onChange={setTitle} required placeholder="مثال: مراجعة عقد بيع الجزائر" />
         <div>
-          <label className="text-sm font-semibold text-navy">عنوان الفاتورة</label>
-          <input
-            required value={title} onChange={(e) => setTitle(e.target.value)}
-            placeholder="مثال: أتعاب تحرير عقد بيع"
-            className="mt-2 w-full h-11 rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none px-4 text-sm"
-          />
-        </div>
-        <div>
-          <label className="text-sm font-semibold text-navy">المبلغ (دج)</label>
-          <input
-            required type="number" value={amount} onChange={(e) => setAmount(e.target.value)}
-            placeholder="50000"
-            className="mt-2 w-full h-11 rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none px-4 text-sm"
-          />
-        </div>
-        <div>
-          <label className="text-sm font-semibold text-navy">الحالة</label>
+          <label className="text-sm font-semibold text-navy">النوع</label>
           <select
-            value={status} onChange={(e) => setStatus(e.target.value)}
+            value={taskType}
+            onChange={(e) => setTaskType(e.target.value as "task" | "appointment")}
             className="mt-2 w-full h-11 rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none px-4 text-sm"
           >
-            {Object.entries(STATUS_LABELS).map(([v, { label }]) => <option key={v} value={v}>{label}</option>)}
+            <option value="task">مهمة</option>
+            <option value="appointment">موعد</option>
           </select>
         </div>
+        <Field
+          label={taskType === "appointment" ? "التاريخ والوقت" : "التاريخ والوقت (اختياري)"}
+          value={dueAt}
+          onChange={setDueAt}
+          type="datetime-local"
+          required={taskType === "appointment"}
+        />
         <div>
-          <label className="text-sm font-semibold text-navy">تاريخ الاستحقاق</label>
-          <input
-            type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)}
+          <label className="text-sm font-semibold text-navy">العميل (اختياري)</label>
+          <select
+            value={clientId}
+            onChange={(e) => setClientId(e.target.value)}
             className="mt-2 w-full h-11 rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none px-4 text-sm"
-          />
+          >
+            <option value="">— بدون —</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>{c.full_name}</option>
+            ))}
+          </select>
         </div>
+      </div>
+
+      <div>
+        <label className="text-sm font-semibold text-navy">ملاحظات</label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={2}
+          className="mt-2 w-full rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none p-4 text-sm resize-y"
+        />
       </div>
 
       {error && (
@@ -206,11 +286,12 @@ function NewInvoiceForm({
       )}
 
       <button
-        type="submit" disabled={loading || !title.trim() || !amount.trim()}
-        className="inline-flex items-center justify-center gap-2 bg-gold text-gold-foreground rounded-xl h-11 px-6 font-bold hover:brightness-95 transition disabled:opacity-50"
+        type="submit"
+        disabled={loading || !title.trim()}
+        className="inline-flex items-center justify-center gap-2 bg-gold text-gold-foreground rounded-xl h-11 px-6 font-bold hover:brightness-95 transition disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-        {loading ? "جاري الحفظ..." : "حفظ الفاتورة"}
+        {loading ? "جاري الحفظ..." : "حفظ"}
       </button>
     </form>
   );
