@@ -1,11 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { FolderClosed, Plus, X, Loader2, AlertCircle } from "lucide-react";
+import { useState, useRef } from "react";
+import { ArrowRight, Plus, FolderClosed, Loader2, X, AlertCircle, Download, FileText as FileIcon, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { requireOrgSession } from "@/lib/require-org-session";
-import { AppShell, EmptyState } from "@/components/AppShell";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 
 type Document = Tables<"documents">;
 
@@ -30,138 +29,219 @@ export const Route = createFileRoute("/documents")({
     await context.queryClient.ensureQueryData(documentsQueryOptions(context.organization.id));
   },
   head: () => ({
-    meta: [
-      { title: "الوثائق — NexLaw" },
-      { name: "description", content: "نظّم وثائق مكتبك واربطها بالعملاء والعقود." },
-      { property: "og:title", content: "الوثائق — NexLaw" },
-      { property: "og:description", content: "نظّم وثائق مكتبك واربطها بالعملاء والعقود." },
-    ],
+    meta: [{ title: "الوثائق — NexLaw" }],
   }),
   component: DocumentsPage,
 });
 
+function formatSize(bytes: number | null) {
+  if (!bytes) return "—";
+  if (bytes < 1024) return `${bytes} بايت`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} كيلوبايت`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} ميغابايت`;
+}
+
 function DocumentsPage() {
-  const { user, organization } = Route.useRouteContext();
+  const { organization } = Route.useRouteContext();
   const queryClient = useQueryClient();
   const { data: documents } = useSuspenseQuery(documentsQueryOptions(organization.id));
   const [showForm, setShowForm] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["documents", organization.id] });
+
+  const handleDownload = async (doc: Document) => {
+    setError(null);
+    const { data, error: urlError } = await supabase.storage
+      .from("documents")
+      .createSignedUrl(doc.file_path, 60);
+    if (urlError || !data) {
+      setError("تعذّر إنشاء رابط التنزيل");
+      return;
+    }
+    window.open(data.signedUrl, "_blank");
+  };
+
+  const handleDelete = async (doc: Document) => {
+    setError(null);
+    await supabase.storage.from("documents").remove([doc.file_path]);
+    const { error: deleteError } = await supabase.from("documents").delete().eq("id", doc.id);
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
+    invalidate();
+  };
 
   return (
-    <AppShell user={user} organization={organization} title="الوثائق" subtitle={`${documents.length} وثيقة`}>
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div className="flex justify-end">
+    <div className="min-h-screen bg-background" dir="rtl">
+      <header className="sticky top-0 z-10 bg-background/85 backdrop-blur border-b border-border">
+        <div className="max-w-4xl mx-auto flex items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gold flex items-center justify-center">
+              <FolderClosed className="w-5 h-5 text-gold-foreground" />
+            </div>
+            <div>
+              <div className="font-bold text-navy">الوثائق</div>
+              <div className="text-xs text-muted-foreground">{organization.name}</div>
+            </div>
+          </div>
+          <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-navy">
+            العودة للوحة التحكم
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </header>
+
+      <main className="max-w-4xl mx-auto p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">{documents.length} وثيقة</div>
           <button
             onClick={() => setShowForm((v) => !v)}
             className="inline-flex items-center gap-2 bg-gold text-gold-foreground rounded-xl px-4 py-2.5 text-sm font-bold hover:brightness-95 transition"
           >
             {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-            {showForm ? "إلغاء" : "وثيقة جديدة"}
+            {showForm ? "إلغاء" : "رفع وثيقة"}
           </button>
         </div>
 
         {showForm && (
-          <NewDocumentForm
+          <UploadForm
             organizationId={organization.id}
             onDone={() => setShowForm(false)}
-            onCreated={() => queryClient.invalidateQueries({ queryKey: ["documents", organization.id] })}
+            onUploaded={invalidate}
           />
+        )}
+
+        {error && (
+          <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-200 text-red-700 p-3 text-sm">
+            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+            <span>{error}</span>
+          </div>
         )}
 
         <div className="bg-card rounded-2xl border border-border overflow-hidden">
           {documents.length === 0 ? (
-            <EmptyState icon={FolderClosed} title="لا توجد وثائق بعد" hint='اضغط "وثيقة جديدة" لتسجيل أول وثيقة.' />
+            <div className="p-10 text-center">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-50 flex items-center justify-center">
+                <FolderClosed className="w-7 h-7 text-gold" />
+              </div>
+              <h2 className="mt-4 font-bold text-navy text-lg">لا يوجد وثائق بعد</h2>
+              <p className="mt-2 text-sm text-muted-foreground">اضغط "رفع وثيقة" لإضافة أول ملف لمكتبك.</p>
+            </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs text-muted-foreground bg-muted/40">
-                  <th className="text-right font-medium px-5 py-3">الوثيقة</th>
-                  <th className="text-right font-medium px-5 py-3">النوع</th>
-                  <th className="text-right font-medium px-5 py-3">المسار</th>
-                  <th className="text-right font-medium px-5 py-3">التاريخ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {documents.map((d) => (
-                  <tr key={d.id} className="border-t border-border">
-                    <td className="px-5 py-3 font-medium">{d.title}</td>
-                    <td className="px-5 py-3 text-muted-foreground">{d.file_type || "—"}</td>
-                    <td className="px-5 py-3 text-muted-foreground truncate max-w-xs">{d.file_path}</td>
-                    <td className="px-5 py-3 text-muted-foreground tabular-nums">
-                      {new Date(d.created_at).toLocaleDateString("ar-DZ")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <ul className="divide-y divide-border">
+              {documents.map((d) => (
+                <li key={d.id} className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                    <FileIcon className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{d.title}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{formatSize(d.file_size)}</div>
+                  </div>
+                  <button
+                    onClick={() => handleDownload(d)}
+                    title="تنزيل"
+                    className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-navy transition"
+                  >
+                    <Download className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(d)}
+                    title="حذف"
+                    className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-red-600 transition"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
-      </div>
-    </AppShell>
+      </main>
+    </div>
   );
 }
 
-function NewDocumentForm({
-  organizationId, onDone, onCreated,
-}: { organizationId: string; onDone: () => void; onCreated: () => void }) {
+function UploadForm({
+  organizationId,
+  onDone,
+  onUploaded,
+}: {
+  organizationId: string;
+  onDone: () => void;
+  onUploaded: () => void;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState("");
-  const [filePath, setFilePath] = useState("");
-  const [fileType, setFileType] = useState("");
-  const [notes, setNotes] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!file) {
+      setError("اختر ملفًا أولاً");
+      return;
+    }
     setLoading(true);
     setError(null);
-    const { error: insertError } = await supabase.from("documents").insert({
+
+    const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+    const path = `${organizationId}/${Date.now()}_${safeName}`;
+
+    const { error: uploadError } = await supabase.storage.from("documents").upload(path, file);
+    if (uploadError) {
+      setLoading(false);
+      setError(uploadError.message);
+      return;
+    }
+
+    const payload: TablesInsert<"documents"> = {
       organization_id: organizationId,
-      title: title.trim(),
-      file_path: filePath.trim(),
-      file_type: fileType.trim() || null,
-      notes: notes.trim() || null,
-    });
+      title: title.trim() || file.name,
+      file_path: path,
+      file_type: file.type || null,
+      file_size: file.size,
+    };
+
+    const { error: insertError } = await supabase.from("documents").insert(payload);
     setLoading(false);
-    if (insertError) { setError(insertError.message); return; }
-    onCreated();
+
+    if (insertError) {
+      setError(insertError.message);
+      return;
+    }
+
+    onUploaded();
     onDone();
   };
 
   return (
     <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-border p-6 space-y-4">
-      <h2 className="font-bold text-navy">وثيقة جديدة</h2>
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div>
-          <label className="text-sm font-semibold text-navy">عنوان الوثيقة</label>
-          <input
-            required value={title} onChange={(e) => setTitle(e.target.value)}
-            placeholder="مثال: بطاقة هوية العميل"
-            className="mt-2 w-full h-11 rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none px-4 text-sm"
-          />
-        </div>
-        <div>
-          <label className="text-sm font-semibold text-navy">المسار أو الرابط</label>
-          <input
-            required value={filePath} onChange={(e) => setFilePath(e.target.value)}
-            placeholder="documents/id-card.pdf"
-            className="mt-2 w-full h-11 rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none px-4 text-sm"
-          />
-        </div>
-        <div>
-          <label className="text-sm font-semibold text-navy">نوع الملف</label>
-          <input
-            value={fileType} onChange={(e) => setFileType(e.target.value)}
-            placeholder="pdf"
-            className="mt-2 w-full h-11 rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none px-4 text-sm"
-          />
-        </div>
-        <div>
-          <label className="text-sm font-semibold text-navy">ملاحظات</label>
-          <input
-            value={notes} onChange={(e) => setNotes(e.target.value)}
-            className="mt-2 w-full h-11 rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none px-4 text-sm"
-          />
-        </div>
+      <h2 className="font-bold text-navy">رفع وثيقة جديدة</h2>
+
+      <div>
+        <label className="text-sm font-semibold text-navy">العنوان (اختياري)</label>
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="مثال: بطاقة هوية العميل أحمد"
+          className="mt-2 w-full h-11 rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none px-4 text-sm"
+        />
+      </div>
+
+      <div>
+        <label className="text-sm font-semibold text-navy">الملف</label>
+        <input
+          ref={fileInputRef}
+          type="file"
+          required
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          className="mt-2 w-full text-sm file:ml-3 file:rounded-lg file:border-0 file:bg-gold file:text-gold-foreground file:px-4 file:py-2 file:text-sm file:font-semibold"
+        />
       </div>
 
       {error && (
@@ -172,11 +252,12 @@ function NewDocumentForm({
       )}
 
       <button
-        type="submit" disabled={loading || !title.trim() || !filePath.trim()}
-        className="inline-flex items-center justify-center gap-2 bg-gold text-gold-foreground rounded-xl h-11 px-6 font-bold hover:brightness-95 transition disabled:opacity-50"
+        type="submit"
+        disabled={loading || !file}
+        className="inline-flex items-center justify-center gap-2 bg-gold text-gold-foreground rounded-xl h-11 px-6 font-bold hover:brightness-95 transition disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-        {loading ? "جاري الحفظ..." : "حفظ الوثيقة"}
+        {loading ? "جاري الرفع..." : "رفع"}
       </button>
     </form>
   );
