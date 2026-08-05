@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ArrowRight, Plus, Users, Loader2, X, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { requireOrgSession } from "@/lib/require-org-session";
+import { Field } from "@/components/Field";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 
 type Client = Tables<"clients">;
@@ -225,20 +226,3 @@ function NewClientForm({
   );
 }
 
-function Field({
-  label, value, onChange, type = "text", placeholder, required,
-}: { label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; required?: boolean }) {
-  return (
-    <div>
-      <label className="text-sm font-semibold text-navy">{label}</label>
-      <input
-        type={type}
-        required={required}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="mt-2 w-full h-11 rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none px-4 text-sm"
-      />
-    </div>
-  );
-}
