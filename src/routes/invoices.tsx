@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Receipt, Plus, X, Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { requireOrgSession } from "@/lib/require-org-session";
+import { Field } from "@/components/Field";
 import { AppShell, EmptyState } from "@/components/AppShell";
 import type { Tables } from "@/integrations/supabase/types";
 
