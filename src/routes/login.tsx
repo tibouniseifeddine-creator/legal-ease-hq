@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Home, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Field } from "@/components/Field";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -210,11 +211,11 @@ function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {mode === "signup" && (
                 <>
-                  <Field label="الاسم الكامل" value={fullName} onChange={setFullName} placeholder="مثال: أحمد بن علي" />
-                  <Field label="اسم المكتب" value={orgName} onChange={setOrgName} placeholder="مثال: مكتب النصر للتوثيق" />
+                  <required label="الاسم الكامل" value={fullName} onChange={setFullName} placeholder="مثال: أحمد بن علي" />
+                  <required label="اسم المكتب" value={orgName} onChange={setOrgName} placeholder="مثال: مكتب النصر للتوثيق" />
                 </>
               )}
-              <Field label="البريد الإلكتروني" value={email} onChange={setEmail} type="email" placeholder="name@example.com" />
+              <required label="البريد الإلكتروني" value={email} onChange={setEmail} type="email" placeholder="name@example.com" />
               <PasswordField
                 label="كلمة المرور"
                 value={password}
@@ -267,20 +268,3 @@ function LoginPage() {
   );
 }
 
-function Field({
-  label, value, onChange, type = "text", placeholder,
-}: { label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string }) {
-  return (
-    <div>
-      <label className="text-sm font-semibold text-navy">{label}</label>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        required={type !== "text" || label === "الاسم الكامل"}
-        className="mt-2 w-full h-11 rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none px-4 text-sm"
-      />
-    </div>
-  );
-}
