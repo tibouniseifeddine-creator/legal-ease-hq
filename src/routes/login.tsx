@@ -212,7 +212,7 @@ function LoginPage() {
               {mode === "signup" && (
                 <>
                   <Field required label="الاسم الكامل" value={fullName} onChange={setFullName} placeholder="مثال: أحمد بن علي" />
-                  <Field required label="اسم المكتب" value={orgName} onChange={setOrgName} placeholder="مثال: مكتب النصر للتوثيق" />
+                  <Field label="اسم المكتب" value={orgName} onChange={setOrgName} placeholder="مثال: مكتب النصر للتوثيق" />
                 </>
               )}
               <Field required label="البريد الإلكتروني" value={email} onChange={setEmail} type="email" placeholder="name@example.com" />
