@@ -87,13 +87,13 @@ function ClientsPage() {
               <tbody>
                 {clients.map((c) => (
                   <tr key={c.id} className="border-t border-border">
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-3">
+                   <td className="px-5 py-3">
+                      <Link to="/clients/$clientId" params={{ clientId: c.id }} className="flex items-center gap-3 hover:underline">
                         <div className="w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center text-xs font-bold shrink-0">
                           {c.full_name.trim().charAt(0) || "؟"}
                         </div>
                         <span className="font-medium">{c.full_name}</span>
-                      </div>
+                      </Link>
                     </td>
                     <td className="px-5 py-3 text-muted-foreground">
                       {c.client_type === "company" ? "شركة" : "فرد"}
