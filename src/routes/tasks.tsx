@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ArrowRight, Plus, CalendarCheck, Loader2, X, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { requireOrgSession } from "@/lib/require-org-session";
+import { AppShell } from "@/components/AppShell";
 import { Field } from "@/components/Field";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 
@@ -62,7 +63,7 @@ function formatDueAt(value: string | null) {
 }
 
 function TasksPage() {
-  const { organization } = Route.useRouteContext();
+  const { user, organization } = Route.useRouteContext();
   const queryClient = useQueryClient();
   const { data: tasks } = useSuspenseQuery(tasksQueryOptions(organization.id));
   const { data: clients } = useSuspenseQuery(clientsListQueryOptions(organization.id));
@@ -79,26 +80,9 @@ function TasksPage() {
   const filtered = tasks.filter((t) => filter === "all" || t.task_type === filter);
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
-      <header className="sticky top-0 z-10 bg-background/85 backdrop-blur border-b border-border">
-        <div className="max-w-4xl mx-auto flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gold flex items-center justify-center">
-              <CalendarCheck className="w-5 h-5 text-gold-foreground" />
-            </div>
-            <div>
-              <div className="font-bold text-navy">المهام والمواعيد</div>
-              <div className="text-xs text-muted-foreground">{organization.name}</div>
-            </div>
-          </div>
-          <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-navy">
-            العودة للوحة التحكم
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-      </header>
+    <AppShell user={user} organization={organization} title="المهام والمواعيد" subtitle="متابعة المهام والمواعيد">
 
-      <main className="max-w-4xl mx-auto p-6 space-y-6">
+      <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-2 bg-muted/60 rounded-xl p-1">
             {[
@@ -179,8 +163,8 @@ function TasksPage() {
             </ul>
           )}
         </div>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }
 

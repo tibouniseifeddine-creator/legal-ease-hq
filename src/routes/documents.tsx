@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { ArrowRight, Plus, FolderClosed, Loader2, X, AlertCircle, Download, FileText as FileIcon, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { requireOrgSession } from "@/lib/require-org-session";
+import { AppShell } from "@/components/AppShell";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 
 type Document = Tables<"documents">;
@@ -42,7 +43,7 @@ function formatSize(bytes: number | null) {
 }
 
 function DocumentsPage() {
-  const { organization } = Route.useRouteContext();
+  const { user, organization } = Route.useRouteContext();
   const queryClient = useQueryClient();
   const { data: documents } = useSuspenseQuery(documentsQueryOptions(organization.id));
   const [showForm, setShowForm] = useState(false);
@@ -74,26 +75,9 @@ function DocumentsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
-      <header className="sticky top-0 z-10 bg-background/85 backdrop-blur border-b border-border">
-        <div className="max-w-4xl mx-auto flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gold flex items-center justify-center">
-              <FolderClosed className="w-5 h-5 text-gold-foreground" />
-            </div>
-            <div>
-              <div className="font-bold text-navy">الوثائق</div>
-              <div className="text-xs text-muted-foreground">{organization.name}</div>
-            </div>
-          </div>
-          <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-navy">
-            العودة للوحة التحكم
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-      </header>
+    <AppShell user={user} organization={organization} title="الوثائق" subtitle="سجل وثائق المكتب">
 
-      <main className="max-w-4xl mx-auto p-6 space-y-6">
+      <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">{documents.length} وثيقة</div>
           <button
@@ -159,8 +143,8 @@ function DocumentsPage() {
             </ul>
           )}
         </div>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }
 

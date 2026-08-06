@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import { ArrowRight, Sparkles, Send, Loader2, AlertCircle, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { requireOrgSession } from "@/lib/require-org-session";
+import { AppShell } from "@/components/AppShell";
 import { chatWithAssistant } from "@/lib/assistant.functions";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -112,37 +113,9 @@ function AssistantPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col" dir="rtl">
-      <header className="sticky top-0 z-10 bg-background/85 backdrop-blur border-b border-border">
-        <div className="max-w-3xl mx-auto flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gold flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-gold-foreground" />
-            </div>
-            <div>
-              <div className="font-bold text-navy">NexLaw AI</div>
-              <div className="text-xs text-muted-foreground">مساعدك الذكي العام</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            {messages.length > 0 && (
-              <button
-                onClick={handleClear}
-                title="مسح المحادثة"
-                className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-red-600 transition"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
-            <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-navy">
-              العودة للوحة التحكم
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-        </div>
-      </header>
+    <AppShell user={user} organization={organization} title="المساعد الذكي" subtitle="مساعد NexLaw للأسئلة القانونية">
 
-      <main className="flex-1 max-w-3xl w-full mx-auto p-6 flex flex-col gap-4">
+      <div className="max-w-3xl mx-auto flex flex-col gap-4">
         <div className="flex-1 space-y-3">
           {messages.length === 0 && (
             <div className="text-center py-16">
@@ -205,7 +178,7 @@ function AssistantPage() {
             <Send className="w-5 h-5" />
           </button>
         </form>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }
