@@ -18,6 +18,13 @@ const TYPE_LABELS: Record<string, string> = {
   other: "أخرى",
 };
 
+const ROLE_LABELS: Record<string, { a: string; b: string }> = {
+  sale: { a: "البائع", b: "المشتري" },
+  rental: { a: "المؤجر", b: "المستأجر" },
+  promise_to_sell: { a: "الواعد بالبيع", b: "الموعود له" },
+  other: { a: "الطرف الأول", b: "الطرف الثاني" },
+};
+
 const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
   draft: { label: "مسودة", cls: "bg-muted text-muted-foreground" },
   pending_review: { label: "قيد المراجعة", cls: "bg-sky-100 text-sky-700" },
@@ -85,66 +92,80 @@ export const Route = createFileRoute("/contracts")({
   component: ContractsPage,
 });
 
-function generateContractText(params: {
+function generateContractText(p: {
   type: string;
-  officeName: string;
-  clientName: string;
-  clientNationalId: string;
+  partyAName: string;
+  partyANationalId: string;
+  partyBName: string;
+  partyBNationalId: string;
   propertyTitle: string;
   propertyAddress: string;
   propertyArea: number | null;
   price: number | null;
   date: string;
+  witness1Name: string;
+  witness1NationalId: string;
+  witness2Name: string;
+  witness2NationalId: string;
 }): string {
-  const { type, officeName, clientName, clientNationalId, propertyTitle, propertyAddress, propertyArea, price, date } = params;
-  const areaText = propertyArea ? `بمساحة ${propertyArea} متر مربع، ` : "";
-  const priceText = price ? `${price.toLocaleString("ar-DZ")} دج` : "[المبلغ]";
-  const addressText = propertyAddress || "[العنوان]";
-  const propTitle = propertyTitle || "[العقار]";
-  const clientBase = clientName || "[اسم الطرف الثاني]";
-  const client = clientNationalId ? `${clientBase}، حامل بطاقة التعريف الوطنية رقم ${clientNationalId}` : clientBase;
-  const office = officeName || "[اسم المكتب]";
+  const roles = ROLE_LABELS[p.type] ?? ROLE_LABELS.other;
+  const partyA = `${p.partyAName || `[${roles.a}]`}${p.partyANationalId ? `، حامل بطاقة التعريف الوطنية رقم ${p.partyANationalId}` : ""}`;
+  const partyB = `${p.partyBName || `[${roles.b}]`}${p.partyBNationalId ? `، حامل بطاقة التعريف الوطنية رقم ${p.partyBNationalId}` : ""}`;
+  const areaText = p.propertyArea ? `بمساحة ${p.propertyArea} متر مربع، ` : "";
+  const priceText = p.price ? `${p.price.toLocaleString("ar-DZ")} دج` : "[المبلغ]";
+  const addressText = p.propertyAddress || "[العنوان]";
+  const propTitle = p.propertyTitle || "[العقار]";
 
-  if (type === "rental") {
-    return `عقد إيجار
+  let body: string;
+  if (p.type === "rental") {
+    body = `عقد إيجار
 
-المادة الأولى: يؤجّر ${office} (الطرف الأول) للسيد/ة ${client} (الطرف الثاني) العقار المسمى "${propTitle}"، ${areaText}الكائن بـ ${addressText}.
-المادة الثانية: مدة الإيجار سنة واحدة قابلة للتجديد، تبدأ من تاريخ ${date}.
+المادة الأولى: يؤجّر السيد/ة ${partyA} (${roles.a}) للسيد/ة ${partyB} (${roles.b}) العقار المسمى "${propTitle}"، ${areaText}الكائن بـ ${addressText}.
+المادة الثانية: مدة الإيجار سنة واحدة قابلة للتجديد، تبدأ من تاريخ ${p.date}.
 المادة الثالثة: تم الاتفاق على بدل إيجار شهري قدره ${priceText}، يُدفع في بداية كل شهر.
 المادة الرابعة: يلتزم المستأجر بالمحافظة على العقار وإعادته بالحالة التي استلمه عليها.
 المادة الخامسة: كل نزاع ينشأ عن هذا العقد يخضع للمحاكم المختصة.`;
-  }
+  } else if (p.type === "promise_to_sell") {
+    body = `عقد وعد بالبيع
 
-  if (type === "promise_to_sell") {
-    return `عقد وعد بالبيع
-
-المادة الأولى: يعد ${office} (الطرف الأول) بالبيع للسيد/ة ${client} (الطرف الثاني) العقار المسمى "${propTitle}"، ${areaText}الكائن بـ ${addressText}.
+المادة الأولى: يعد السيد/ة ${partyA} (${roles.a}) بالبيع للسيد/ة ${partyB} (${roles.b}) العقار المسمى "${propTitle}"، ${areaText}الكائن بـ ${addressText}.
 المادة الثانية: تم الاتفاق على ثمن إجمالي قدره ${priceText}.
-المادة الثالثة: يلتزم الطرفان بإبرام العقد النهائي خلال مدة أقصاها ثلاثة أشهر من تاريخ ${date}.
+المادة الثالثة: يلتزم الطرفان بإبرام العقد النهائي خلال مدة أقصاها ثلاثة أشهر من تاريخ ${p.date}.
 المادة الرابعة: كل نزاع ينشأ عن هذا العقد يخضع للمحاكم المختصة.`;
-  }
+  } else if (p.type === "other") {
+    body = `عقد
 
-  if (type === "other") {
-    return `عقد
-
-بين: ${office} (الطرف الأول)
-و: ${client} (الطرف الثاني)
+بين: ${partyA} (${roles.a})
+و: ${partyB} (${roles.b})
 
 بخصوص: ${propTitle}
-بتاريخ: ${date}
+بتاريخ: ${p.date}
 
 [أضف بنود العقد هنا]`;
-  }
+  } else {
+    body = `عقد بيع
 
-  return `عقد بيع
-
-المادة الأولى: يبيع ${office} (الطرف الأول/البائع) للسيد/ة ${client} (الطرف الثاني/المشتري) العقار المسمى "${propTitle}"، ${areaText}الكائن بـ ${addressText}.
+المادة الأولى: يبيع السيد/ة ${partyA} (${roles.a}) للسيد/ة ${partyB} (${roles.b}) العقار المسمى "${propTitle}"، ${areaText}الكائن بـ ${addressText}.
 المادة الثانية: تم الاتفاق على ثمن قدره ${priceText}، يُدفع حسب الاتفاق بين الطرفين.
 المادة الثالثة: يلتزم البائع بتسليم العقار خاليًا من كل شاغل وحق للغير.
 المادة الرابعة: تُنقل الملكية إلى المشتري فور التوقيع على هذا العقد ودفع كامل الثمن.
 المادة الخامسة: كل نزاع ينشأ عن هذا العقد يخضع للمحاكم المختصة.
 
-حرر بتاريخ: ${date}`;
+حرر بتاريخ: ${p.date}`;
+  }
+
+  const witnessLines = [
+    p.witness1Name ? `الشاهد الأول: ${p.witness1Name}${p.witness1NationalId ? `، حامل بطاقة رقم ${p.witness1NationalId}` : ""}` : "",
+    p.witness2Name ? `الشاهد الثاني: ${p.witness2Name}${p.witness2NationalId ? `، حامل بطاقة رقم ${p.witness2NationalId}` : ""}` : "",
+  ].filter(Boolean);
+
+  const witnessBlock = witnessLines.length > 0 ? `\n\nالشهود:\n${witnessLines.join("\n")}` : "";
+
+  const signatures = `\n\nالتوقيعات:\n${roles.a}: ..........................          ${roles.b}: ..........................${
+    witnessLines.length > 0 ? "\nالشاهد الأول: ..........................          الشاهد الثاني: .........................." : ""
+  }`;
+
+  return body + witnessBlock + signatures;
 }
 
 function ContractsPage() {
@@ -190,7 +211,6 @@ function ContractsPage() {
         {showForm && (
           <NewContractForm
             organizationId={organization.id}
-            organizationName={organization.name}
             clients={clients}
             properties={properties}
             onDone={() => setShowForm(false)}
@@ -244,16 +264,48 @@ function ContractsPage() {
   );
 }
 
+function NameAutocomplete({
+  label, value, onChange, clients, onMatch, listId,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  clients: Client[];
+  onMatch: (client: Client | null) => void;
+  listId: string;
+}) {
+  return (
+    <div>
+      <label className="text-sm font-semibold text-navy">{label}</label>
+      <input
+        type="text"
+        list={listId}
+        value={value}
+        onChange={(e) => {
+          const v = e.target.value;
+          onChange(v);
+          onMatch(clients.find((c) => c.full_name === v) ?? null);
+        }}
+        placeholder="اكتب الاسم أو اختره من الاقتراحات"
+        className="mt-2 w-full h-11 rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none px-4 text-sm"
+      />
+      <datalist id={listId}>
+        {clients.map((c) => (
+          <option key={c.id} value={c.full_name} />
+        ))}
+      </datalist>
+    </div>
+  );
+}
+
 function NewContractForm({
   organizationId,
-  organizationName,
   clients,
   properties,
   onDone,
   onCreated,
 }: {
   organizationId: string;
-  organizationName: string;
   clients: Client[];
   properties: Property[];
   onDone: () => void;
@@ -265,8 +317,6 @@ function NewContractForm({
   const [status, setStatus] = useState("draft");
   const [clientId, setClientId] = useState("");
   const [propertyId, setPropertyId] = useState("");
-  const [clientNationalId, setClientNationalId] = useState("");
-  const [clientPhone, setClientPhone] = useState("");
   const [propertyPrice, setPropertyPrice] = useState("");
   const [propertyArea, setPropertyArea] = useState("");
   const [contractDate, setContractDate] = useState(today);
@@ -274,11 +324,18 @@ function NewContractForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const client = clients.find((c) => c.id === clientId);
-    setClientNationalId(client?.national_id ?? "");
-    setClientPhone(client?.phone ?? "");
-  }, [clientId, clients]);
+  const [partyAName, setPartyAName] = useState("");
+  const [partyANationalId, setPartyANationalId] = useState("");
+  const [partyAPhone, setPartyAPhone] = useState("");
+  const [partyBName, setPartyBName] = useState("");
+  const [partyBNationalId, setPartyBNationalId] = useState("");
+  const [partyBPhone, setPartyBPhone] = useState("");
+  const [witness1Name, setWitness1Name] = useState("");
+  const [witness1NationalId, setWitness1NationalId] = useState("");
+  const [witness2Name, setWitness2Name] = useState("");
+  const [witness2NationalId, setWitness2NationalId] = useState("");
+
+  const roles = ROLE_LABELS[contractType] ?? ROLE_LABELS.other;
 
   useEffect(() => {
     const property = properties.find((p) => p.id === propertyId);
@@ -286,19 +343,34 @@ function NewContractForm({
     setPropertyArea(property?.area != null ? String(property.area) : "");
   }, [propertyId, properties]);
 
+  const fillFromClient = (client: Client | null, setNationalId: (v: string) => void, setPhone: (v: string) => void) => {
+    if (!client) return;
+    setNationalId(client.national_id ?? "");
+    setPhone(client.phone ?? "");
+  };
+
+  const fillWitnessFromClient = (client: Client | null, setNationalId: (v: string) => void) => {
+    if (!client) return;
+    setNationalId(client.national_id ?? "");
+  };
+
   const handleGenerate = () => {
-    const client = clients.find((c) => c.id === clientId);
     const property = properties.find((p) => p.id === propertyId);
     const text = generateContractText({
       type: contractType,
-      officeName: organizationName,
-      clientName: client?.full_name ?? "",
-      clientNationalId: clientNationalId.trim(),
+      partyAName: partyAName.trim(),
+      partyANationalId: partyANationalId.trim(),
+      partyBName: partyBName.trim(),
+      partyBNationalId: partyBNationalId.trim(),
       propertyTitle: property?.title ?? "",
       propertyAddress: property ? [property.address, property.city].filter(Boolean).join("، ") : "",
       propertyArea: propertyArea.trim() ? Number(propertyArea) : null,
       price: propertyPrice.trim() ? Number(propertyPrice) : null,
       date: contractDate,
+      witness1Name: witness1Name.trim(),
+      witness1NationalId: witness1NationalId.trim(),
+      witness2Name: witness2Name.trim(),
+      witness2NationalId: witness2NationalId.trim(),
     });
     setContent(text);
     if (!title.trim() && property) {
@@ -320,6 +392,16 @@ function NewContractForm({
       property_id: propertyId || null,
       content: content.trim() || null,
       contract_date: contractDate,
+      party_a_name: partyAName.trim() || null,
+      party_a_national_id: partyANationalId.trim() || null,
+      party_a_phone: partyAPhone.trim() || null,
+      party_b_name: partyBName.trim() || null,
+      party_b_national_id: partyBNationalId.trim() || null,
+      party_b_phone: partyBPhone.trim() || null,
+      witness1_name: witness1Name.trim() || null,
+      witness1_national_id: witness1NationalId.trim() || null,
+      witness2_name: witness2Name.trim() || null,
+      witness2_national_id: witness2NationalId.trim() || null,
     };
 
     const { error: insertError } = await supabase.from("contracts").insert(payload);
@@ -330,27 +412,12 @@ function NewContractForm({
       return;
     }
 
-    if (clientId) {
-      const original = clients.find((c) => c.id === clientId);
-      const newNationalId = clientNationalId.trim() || null;
-      const newPhone = clientPhone.trim() || null;
-      if (original && (newNationalId !== (original.national_id ?? null) || newPhone !== (original.phone ?? null))) {
-        await supabase
-          .from("clients")
-          .update({ national_id: newNationalId, phone: newPhone })
-          .eq("id", clientId);
-      }
-    }
-
     if (propertyId) {
       const original = properties.find((p) => p.id === propertyId);
       const newPrice = propertyPrice.trim() ? Number(propertyPrice) : null;
       const newArea = propertyArea.trim() ? Number(propertyArea) : null;
       if (original && (newPrice !== original.price || newArea !== original.area)) {
-        await supabase
-          .from("properties")
-          .update({ price: newPrice, area: newArea })
-          .eq("id", propertyId);
+        await supabase.from("properties").update({ price: newPrice, area: newArea }).eq("id", propertyId);
       }
     }
 
@@ -360,7 +427,7 @@ function NewContractForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-border p-6 space-y-4">
+    <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-border p-6 space-y-5">
       <h2 className="font-bold text-navy">عقد جديد</h2>
 
       <div className="grid sm:grid-cols-2 gap-4">
@@ -390,8 +457,11 @@ function NewContractForm({
           </select>
         </div>
         <Field label="التاريخ" value={contractDate} onChange={setContractDate} type="date" />
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-4 pt-2 border-t border-border">
         <div>
-          <label className="text-sm font-semibold text-navy">العميل</label>
+          <label className="text-sm font-semibold text-navy">العميل المرتبط (اختياري، لأرشفة العقد فقط)</label>
           <select
             value={clientId}
             onChange={(e) => setClientId(e.target.value)}
@@ -416,13 +486,6 @@ function NewContractForm({
             ))}
           </select>
         </div>
-
-        {clientId && (
-          <>
-            <Field label="رقم هوية العميل" value={clientNationalId} onChange={setClientNationalId} placeholder="يُحفظ في سجل العميل عند التعديل" />
-            <Field label="هاتف العميل" value={clientPhone} onChange={setClientPhone} />
-          </>
-        )}
         {propertyId && (
           <>
             <Field label="سعر العقار (دج)" value={propertyPrice} onChange={setPropertyPrice} type="number" />
@@ -431,7 +494,67 @@ function NewContractForm({
         )}
       </div>
 
-      <div>
+      <div className="pt-2 border-t border-border">
+        <h3 className="text-sm font-bold text-navy mb-3">{roles.a} (الطرف الأول)</h3>
+        <div className="grid sm:grid-cols-3 gap-4">
+          <NameAutocomplete
+            label="الاسم"
+            value={partyAName}
+            onChange={setPartyAName}
+            clients={clients}
+            onMatch={(c) => fillFromClient(c, setPartyANationalId, setPartyAPhone)}
+            listId="clients-datalist-a"
+          />
+          <Field label="رقم الهوية" value={partyANationalId} onChange={setPartyANationalId} />
+          <Field label="الهاتف" value={partyAPhone} onChange={setPartyAPhone} />
+        </div>
+      </div>
+
+      <div className="pt-2 border-t border-border">
+        <h3 className="text-sm font-bold text-navy mb-3">{roles.b} (الطرف الثاني)</h3>
+        <div className="grid sm:grid-cols-3 gap-4">
+          <NameAutocomplete
+            label="الاسم"
+            value={partyBName}
+            onChange={setPartyBName}
+            clients={clients}
+            onMatch={(c) => fillFromClient(c, setPartyBNationalId, setPartyBPhone)}
+            listId="clients-datalist-b"
+          />
+          <Field label="رقم الهوية" value={partyBNationalId} onChange={setPartyBNationalId} />
+          <Field label="الهاتف" value={partyBPhone} onChange={setPartyBPhone} />
+        </div>
+      </div>
+
+      <div className="pt-2 border-t border-border">
+        <h3 className="text-sm font-bold text-navy mb-3">الشهود (اختياري)</h3>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
+            <NameAutocomplete
+              label="الشاهد الأول"
+              value={witness1Name}
+              onChange={setWitness1Name}
+              clients={clients}
+              onMatch={(c) => fillWitnessFromClient(c, setWitness1NationalId)}
+              listId="clients-datalist-w1"
+            />
+            <Field label="رقم الهوية" value={witness1NationalId} onChange={setWitness1NationalId} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <NameAutocomplete
+              label="الشاهد الثاني"
+              value={witness2Name}
+              onChange={setWitness2Name}
+              clients={clients}
+              onMatch={(c) => fillWitnessFromClient(c, setWitness2NationalId)}
+              listId="clients-datalist-w2"
+            />
+            <Field label="رقم الهوية" value={witness2NationalId} onChange={setWitness2NationalId} />
+          </div>
+        </div>
+      </div>
+
+      <div className="pt-2 border-t border-border">
         <div className="flex items-center justify-between mb-2">
           <label className="text-sm font-semibold text-navy">نص العقد</label>
           <button
@@ -446,8 +569,8 @@ function NewContractForm({
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          rows={10}
-          placeholder="اضغط «توليد النص تلقائيًا» بعد اختيار النوع والعميل والعقار، أو اكتب النص يدويًا."
+          rows={12}
+          placeholder="اضغط «توليد النص تلقائيًا» بعد تعبئة الأطراف والعقار، أو اكتب النص يدويًا."
           className="w-full rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none p-4 text-sm font-mono leading-relaxed resize-y"
         />
       </div>
