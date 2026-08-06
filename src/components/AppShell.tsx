@@ -1,4 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useState } from "react";
 import type { ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import {
@@ -37,6 +38,7 @@ export function AppShell({
 }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   const displayName =
     (typeof user.user_metadata?.full_name === "string" && user.user_metadata.full_name.trim()) ||
@@ -121,7 +123,7 @@ export function AppShell({
                 {initials}
               </div>
               <button
-                onClick={handleSignOut}
+                onClick={() => setShowSignOutConfirm(true)}
                 title="تسجيل الخروج"
                 className="p-2 rounded-lg hover:bg-muted text-muted-foreground"
               >
@@ -133,6 +135,35 @@ export function AppShell({
 
         <main className="p-6">{children}</main>
       </div>
+
+      {showSignOutConfirm && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+          onClick={() => setShowSignOutConfirm(false)}
+        >
+          <div
+            className="bg-card rounded-2xl border border-border p-6 max-w-sm w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-bold text-navy mb-2">تسجيل الخروج</h3>
+            <p className="text-sm text-muted-foreground mb-5">هل أنت متأكد أنك تريد تسجيل الخروج من حسابك؟</p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleSignOut}
+                className="flex-1 bg-red-600 text-white rounded-xl h-11 font-bold hover:brightness-95 transition"
+              >
+                تسجيل الخروج
+              </button>
+              <button
+                onClick={() => setShowSignOutConfirm(false)}
+                className="flex-1 bg-muted rounded-xl h-11 font-bold hover:bg-accent transition"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
