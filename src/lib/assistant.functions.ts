@@ -13,12 +13,14 @@ const ChatInput = z.object({
     )
     .min(1)
     .max(30),
+  context: z.string().max(4000).optional(),
 });
 
-const SYSTEM_PROMPT = `أنت "NexLaw AI"، المساعد الذكي داخل منصة NexLaw لإدارة أعمال المحامين والموثقين والوسطاء العقاريين في الجزائر والسعودية والإمارات.
+const BASE_SYSTEM_PROMPT = `أنت "NexLaw AI"، المساعد الذكي داخل منصة NexLaw لإدارة أعمال المحامين والموثقين والوسطاء العقاريين في الجزائر والسعودية والإمارات.
 تساعد في: أسئلة قانونية وعقارية عامة، صياغة رسائل ومسودات، تنظيم المهام، وأي استفسار متعلق بعمل المكتب.
 أجب دائمًا بالعربية الفصحى، بإيجاز ووضوح.
-وضّح عند الأسئلة القانونية الدقيقة أنك لست بديلاً عن استشارة قانونية رسمية.`;
+وضّح عند الأسئلة القانونية الدقيقة أنك لست بديلاً عن استشارة قانونية رسمية.
+إذا زُوِّدت ببيانات فعلية عن مكتب المستخدم (فواتير، عقود...)، استخدمها مباشرة في إجابتك واعتبرها المصدر الوحيد الموثوق لهذه الأرقام — لا تخترع أرقامًا غير موجودة فيها، وإذا كانت القائمة فارغة أخبر المستخدم بوضوح أنه لا يوجد شيء مطابق حاليًا.`;
 
 export const chatWithAssistant = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => ChatInput.parse(input))
@@ -29,9 +31,13 @@ export const chatWithAssistant = createServerFn({ method: "POST" })
     const gateway = createLovableAiGatewayProvider(key);
     const model = gateway("openai/gpt-5.5");
 
+    const system = data.context
+      ? `${BASE_SYSTEM_PROMPT}\n\nبيانات مكتب المستخدم الحالية (حقيقية، محدَّثة وقت السؤال):\n${data.context}`
+      : BASE_SYSTEM_PROMPT;
+
     const { text } = await generateText({
       model,
-      system: SYSTEM_PROMPT,
+      system,
       messages: data.messages,
     });
 
