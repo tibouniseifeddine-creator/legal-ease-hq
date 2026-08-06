@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ArrowRight, Plus, Receipt, Loader2, X, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { requireOrgSession } from "@/lib/require-org-session";
+import { AppShell } from "@/components/AppShell";
 import { Field } from "@/components/Field";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 
@@ -79,7 +80,7 @@ export const Route = createFileRoute("/invoices")({
 });
 
 function InvoicesPage() {
-  const { organization } = Route.useRouteContext();
+  const { user, organization } = Route.useRouteContext();
   const queryClient = useQueryClient();
   const { data: invoices } = useSuspenseQuery(invoicesQueryOptions(organization.id));
   const { data: clients } = useSuspenseQuery(clientsListQueryOptions(organization.id));
@@ -100,26 +101,9 @@ function InvoicesPage() {
   const unpaidTotal = invoices.filter((i) => i.status === "unpaid" || i.status === "overdue").reduce((sum, i) => sum + Number(i.amount), 0);
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
-      <header className="sticky top-0 z-10 bg-background/85 backdrop-blur border-b border-border">
-        <div className="max-w-5xl mx-auto flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gold flex items-center justify-center">
-              <Receipt className="w-5 h-5 text-gold-foreground" />
-            </div>
-            <div>
-              <div className="font-bold text-navy">الفواتير</div>
-              <div className="text-xs text-muted-foreground">{organization.name}</div>
-            </div>
-          </div>
-          <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-navy">
-            العودة للوحة التحكم
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-      </header>
+    <AppShell user={user} organization={organization} title="الفواتير" subtitle="الفواتير والملخص المالي">
 
-      <main className="max-w-5xl mx-auto p-6 space-y-6">
+      <div className="max-w-5xl mx-auto space-y-6">
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-card rounded-2xl border border-border p-5">
             <div className="text-sm text-muted-foreground">إجمالي الفواتير</div>
@@ -197,8 +181,8 @@ function InvoicesPage() {
             </table>
           )}
         </div>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }
 

@@ -11,6 +11,7 @@ import heroImg from "@/assets/hero-handshake.jpg";
 import robotImg from "@/assets/ai-robot.png";
 import { supabase } from "@/integrations/supabase/client";
 import { requireOrgSession } from "@/lib/require-org-session";
+import { AppShell } from "@/components/AppShell";
 
 type DashboardAlert = { id: string; dot: string; title: string; subtitle: string };
 
@@ -254,109 +255,8 @@ function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex" dir="rtl">
-      {/* Sidebar */}
-      <aside className="w-64 shrink-0 bg-navy text-navy-foreground flex flex-col min-h-screen sticky top-0">
-        <div className="p-5 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gold flex items-center justify-center">
-              <Home className="w-5 h-5 text-navy" />
-            </div>
-            <div>
-              <div className="text-lg font-bold leading-none">NexLaw</div>
-              <div className="text-[10px] text-white/60 mt-1">Legal & Real Estate Workspace</div>
-            </div>
-          </div>
-        </div>
-
-        <nav className="flex-1 p-3 space-y-1">
-          {navItems.map((item) => {
-            const cls = [
-              "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
-              item.active
-                ? "bg-gold text-gold-foreground shadow-sm"
-                : "text-white/80 hover:bg-white/5 hover:text-white",
-            ].join(" ");
-            const inner = (
-              <>
-                <item.icon className="w-5 h-5" />
-                <span>{item.label}</span>
-              </>
-            );
-            return item.to ? (
-              <Link key={item.label} to={item.to} className={cls}>
-                {inner}
-              </Link>
-            ) : (
-              <button key={item.label} className={cls}>
-                {inner}
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="m-3 p-4 rounded-2xl bg-white/5 border border-white/10">
-          <div className="flex items-start justify-between mb-2">
-            <div className="text-sm font-bold">NexLaw AI</div>
-            <Brain className="w-6 h-6 text-gold" />
-          </div>
-          <p className="text-xs text-white/70 leading-relaxed mb-3">
-            مساعدك الذكي لإنجاز الأعمال القانونية بسرعة ودقة
-          </p>
-          <Link
-  to="/assistant"
-  className="w-full inline-flex items-center justify-center bg-gold text-gold-foreground rounded-lg py-2 text-xs font-semibold hover:brightness-95 transition"
->
-  تحدث مع الذكاء الاصطناعي
-</Link>
-        </div>
-      </aside>
-
-      {/* Main */}
-      <div className="flex-1 min-w-0">
-        {/* Topbar */}
-        <header className="sticky top-0 z-10 bg-background/80 backdrop-blur border-b border-border">
-          <div className="flex items-center gap-4 px-6 py-4">
-            <button className="p-2 rounded-lg hover:bg-muted">
-              <Menu className="w-5 h-5" />
-            </button>
-            <div className="flex-1 max-w-2xl relative">
-              <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="بحث عن عميل، عقد، أو وثيقة..."
-                className="w-full h-11 rounded-full bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none pr-10 pl-4 text-sm"
-              />
-            </div>
-            <div className="flex items-center gap-3">
-              <button className="relative p-2 rounded-full hover:bg-muted">
-                <Bell className="w-5 h-5" />
-                <span className="absolute -top-0.5 -left-0.5 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">3</span>
-              </button>
-              <button className="relative p-2 rounded-full hover:bg-muted">
-                <Mail className="w-5 h-5" />
-                <span className="absolute -top-0.5 -left-0.5 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">2</span>
-              </button>
-              <div className="flex items-center gap-3 pr-2 border-r border-border">
-                <div className="text-right leading-tight">
-                  <div className="text-sm font-bold">{displayName}</div>
-                  <div className="text-xs text-muted-foreground">{organization.name}</div>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-navy text-navy-foreground flex items-center justify-center font-bold">{initials}</div>
-                <button
-                  onClick={handleSignOut}
-                  title="تسجيل الخروج"
-                  className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-red-600 transition"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Content */}
-        <main className="p-6 space-y-6">
+    <AppShell user={user} organization={organization} title="لوحة التحكم" subtitle="نظرة عامة على نشاط مكتبك">
+      <div className="space-y-6">
           {/* Hero */}
           <section className="relative overflow-hidden rounded-3xl bg-gradient-to-l from-white to-amber-50 border border-border">
             <div className="grid md:grid-cols-2 items-center">
@@ -588,8 +488,7 @@ function Dashboard() {
               </Link>
             </aside>
           </div>
-        </main>
       </div>
-    </div>
+    </AppShell>
   );
 }

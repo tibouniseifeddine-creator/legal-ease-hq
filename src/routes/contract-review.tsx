@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { reviewContract, type ContractReview } from "@/lib/contract-review.functions";
 import { requireOrgSession } from "@/lib/require-org-session";
+import { AppShell } from "@/components/AppShell";
 
 export const Route = createFileRoute("/contract-review")({
   beforeLoad: requireOrgSession,
@@ -26,6 +27,7 @@ const SAMPLE = `عقد بيع شقة سكنية
 المادة الرابعة: كل نزاع يخضع للمحاكم الجزائرية.`;
 
 function ContractReviewPage() {
+  const { user, organization } = Route.useRouteContext();
   const runReview = useServerFn(reviewContract);
   const [text, setText] = useState("");
   const [type, setType] = useState("عقد بيع");
@@ -51,26 +53,9 @@ function ContractReviewPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
-      <header className="sticky top-0 z-10 bg-background/85 backdrop-blur border-b border-border">
-        <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gold flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-gold-foreground" />
-            </div>
-            <div>
-              <div className="font-bold text-navy">مراجعة العقد بالذكاء الاصطناعي</div>
-              <div className="text-xs text-muted-foreground">تحليل البنود، المخاطر، والاقتراحات</div>
-            </div>
-          </div>
-          <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-navy">
-            العودة للوحة التحكم
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-      </header>
+    <AppShell user={user} organization={organization} title="مراجعة العقد" subtitle="تحليل البنود والمخاطر بالذكاء الاصطناعي">
 
-      <main className="max-w-6xl mx-auto p-6 grid lg:grid-cols-[1fr_1.2fr] gap-6">
+      <div className="max-w-6xl mx-auto grid lg:grid-cols-[1fr_1.2fr] gap-6">
         {/* Input */}
         <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-border p-6 space-y-4 h-fit sticky top-24">
           <div>
@@ -142,8 +127,8 @@ function ContractReviewPage() {
           </div>
           <button onClick={() => router.invalidate()} className="hidden" />
         </section>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }
 

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ArrowRight, Settings as SettingsIcon, Loader2, AlertCircle, CheckCircle2, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { requireOrgSession } from "@/lib/require-org-session";
+import { AppShell } from "@/components/AppShell";
 
 const PLAN_LABELS: Record<string, string> = {
   basic: "أساسية", professional: "احترافية", enterprise: "مؤسسات",
@@ -132,26 +133,9 @@ function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
-      <header className="sticky top-0 z-10 bg-background/85 backdrop-blur border-b border-border">
-        <div className="max-w-2xl mx-auto flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gold flex items-center justify-center">
-              <SettingsIcon className="w-5 h-5 text-gold-foreground" />
-            </div>
-            <div>
-              <div className="font-bold text-navy">الإعدادات</div>
-              <div className="text-xs text-muted-foreground">{organization.name}</div>
-            </div>
-          </div>
-          <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-navy">
-            العودة للوحة التحكم
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-      </header>
+    <AppShell user={user} organization={organization} title="الإعدادات" subtitle="إعدادات المكتب والحساب">
 
-      <main className="max-w-2xl mx-auto p-6 space-y-6">
+      <div className="max-w-2xl mx-auto space-y-6">
         <section className="bg-card rounded-2xl border border-border p-6">
           <h2 className="font-bold text-navy mb-4">المكتب</h2>
 
@@ -297,7 +281,7 @@ function SettingsPage() {
             تسجيل الخروج
           </button>
         </section>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }
