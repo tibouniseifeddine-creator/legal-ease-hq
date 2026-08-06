@@ -27,6 +27,7 @@ const SAMPLE = `عقد بيع شقة سكنية
 المادة الرابعة: كل نزاع يخضع للمحاكم الجزائرية.`;
 
 function ContractReviewPage() {
+  const { user, organization } = Route.useRouteContext();
   const runReview = useServerFn(reviewContract);
   const [text, setText] = useState("");
   const [type, setType] = useState("عقد بيع");
