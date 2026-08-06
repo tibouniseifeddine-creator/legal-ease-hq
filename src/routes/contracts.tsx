@@ -4,7 +4,6 @@ import { useState } from "react";
 import { ArrowRight, Plus, FileText, Loader2, X, AlertCircle, Wand2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { requireOrgSession } from "@/lib/require-org-session";
-import { AppShell } from "@/components/AppShell";
 import { Field } from "@/components/Field";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 
@@ -178,7 +177,7 @@ function generateContractText(p: {
 }
 
 function ContractsPage() {
-  const { user, organization } = Route.useRouteContext();
+  const { organization } = Route.useRouteContext();
   const queryClient = useQueryClient();
   const { data: contracts } = useSuspenseQuery(contractsQueryOptions(organization.id));
   const { data: clients } = useSuspenseQuery(clientsListQueryOptions(organization.id));
@@ -186,9 +185,26 @@ function ContractsPage() {
   const [showForm, setShowForm] = useState(false);
 
   return (
-    <AppShell user={user} organization={organization} title="العقود" subtitle="إدارة العقود وحالاتها">
+    <div className="min-h-screen bg-background" dir="rtl">
+      <header className="sticky top-0 z-10 bg-background/85 backdrop-blur border-b border-border">
+        <div className="max-w-5xl mx-auto flex items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gold flex items-center justify-center">
+              <FileText className="w-5 h-5 text-gold-foreground" />
+            </div>
+            <div>
+              <div className="font-bold text-navy">العقود</div>
+              <div className="text-xs text-muted-foreground">{organization.name}</div>
+            </div>
+          </div>
+          <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-navy">
+            العودة للوحة التحكم
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </header>
 
-      <div className="max-w-5xl mx-auto space-y-6">
+      <main className="max-w-5xl mx-auto p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">{contracts.length} عقد</div>
           <button
@@ -251,8 +267,8 @@ function ContractsPage() {
             </table>
           )}
         </div>
-      </div>
-    </AppShell>
+      </main>
+    </div>
   );
 }
 
@@ -348,6 +364,7 @@ function NewContractForm({
   const [propertyArea, setPropertyArea] = useState("");
   const [matchedPropertyId, setMatchedPropertyId] = useState<string | null>(null);
   const [contractDate, setContractDate] = useState(today);
+  const [endDate, setEndDate] = useState("");
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -478,6 +495,7 @@ function NewContractForm({
       property_id: finalPropertyId,
       content: content.trim() || null,
       contract_date: contractDate,
+      end_date: endDate || null,
       party_a_name: partyAName.trim() || null,
       party_a_national_id: partyANationalId.trim() || null,
       party_a_phone: partyAPhone.trim() || null,
@@ -534,6 +552,7 @@ function NewContractForm({
           </select>
         </div>
         <Field label="التاريخ" value={contractDate} onChange={setContractDate} type="date" />
+        <Field label="تاريخ الانتهاء (اختياري)" value={endDate} onChange={setEndDate} type="date" />
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4 pt-2 border-t border-border">
