@@ -15,6 +15,7 @@ const TYPE_LABELS: Record<string, string> = {
   sale: "بيع",
   rental: "إيجار",
   promise_to_sell: "وعد بالبيع",
+  agency: "وكالة",
   other: "أخرى",
 };
 
@@ -30,6 +31,7 @@ const ROLE_LABELS: Record<string, { a: string; b: string }> = {
   sale: { a: "البائع", b: "المشتري" },
   rental: { a: "المؤجر", b: "المستأجر" },
   promise_to_sell: { a: "الواعد بالبيع", b: "الموعود له" },
+  agency: { a: "الموكِّل", b: "الوكيل" },
   other: { a: "الطرف الأول", b: "الطرف الثاني" },
 };
 
@@ -100,7 +102,7 @@ export const Route = createFileRoute("/contracts")({
   component: ContractsPage,
 });
 
-function generateContractText(p: {
+export function generateContractText(p: {
   type: string;
   partyAName: string;
   partyANationalId: string;
@@ -140,6 +142,14 @@ function generateContractText(p: {
 المادة الثانية: تم الاتفاق على ثمن إجمالي قدره ${priceText}.
 المادة الثالثة: يلتزم الطرفان بإبرام العقد النهائي خلال مدة أقصاها ثلاثة أشهر من تاريخ ${p.date}.
 المادة الرابعة: كل نزاع ينشأ عن هذا العقد يخضع للمحاكم المختصة.`;
+  } else if (p.type === "agency") {
+    body = `عقد وكالة
+
+المادة الأولى: يوكِّل السيد/ة ${partyA} (${roles.a}) السيد/ة ${partyB} (${roles.b}) للقيام بجميع الإجراءات القانونية والإدارية اللازمة المتعلقة بالعقار المسمى "${propTitle}"، ${areaText}الكائن بـ ${addressText}، بما في ذلك على سبيل المثال لا الحصر: التوقيع على العقود، ومتابعة الإجراءات لدى المصالح المختصة، واستلام وتسليم الوثائق.
+المادة الثانية: هذه الوكالة سارية اعتبارًا من تاريخ ${p.date}.
+المادة الثالثة: يلتزم الوكيل بأداء المهام الموكَلة إليه بأمانة وحسن نية، وفي حدود الصلاحيات الممنوحة له بموجب هذا العقد.
+المادة الرابعة: للموكِّل الحق في إلغاء هذه الوكالة في أي وقت بإشعار كتابي.
+المادة الخامسة: كل نزاع ينشأ عن هذا العقد يخضع للمحاكم المختصة.`;
   } else if (p.type === "other") {
     body = `عقد
 
@@ -253,8 +263,12 @@ function ContractsPage() {
                 {contracts.map((c) => {
                   const st = STATUS_LABELS[c.status] ?? STATUS_LABELS.draft;
                   return (
-                    <tr key={c.id} className="border-t border-border">
-                      <td className="px-5 py-3 font-medium">{c.title}</td>
+                    <tr key={c.id} className="border-t border-border hover:bg-muted/30">
+                      <td className="px-5 py-3 font-medium">
+                        <Link to="/contracts/$contractId" params={{ contractId: c.id }} className="hover:underline">
+                          {c.title}
+                        </Link>
+                      </td>
                       <td className="px-5 py-3 text-muted-foreground">{TYPE_LABELS[c.contract_type] ?? c.contract_type}</td>
                       <td className="px-5 py-3">
                         <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-md ${st.cls}`}>{st.label}</span>
