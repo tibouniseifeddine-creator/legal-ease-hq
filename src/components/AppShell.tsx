@@ -7,6 +7,7 @@ import {
   Calendar, Receipt, BarChart3, Settings, Brain, LogOut, ScanSearch,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { CommandPalette } from "@/components/CommandPalette";
 
 const navItems = [
   { icon: Home, label: "لوحة التحكم", to: "/" },
@@ -30,7 +31,7 @@ export function AppShell({
   children,
 }: {
   user: User;
-  organization: { name: string };
+  organization: { id: string; name: string };
   title: string;
   subtitle?: string;
   actions?: ReactNode;
@@ -114,6 +115,7 @@ export function AppShell({
               </div>
             </div>
             {actions}
+            <CommandPalette organizationId={organization.id} />
             <div className="flex items-center gap-3">
               <div className="text-left hidden sm:block">
                 <div className="text-sm font-semibold text-navy leading-none">{displayName}</div>
