@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { generateText } from "ai";
 import { z } from "zod";
 import { createLovableAiGatewayProvider } from "./ai-gateway.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const ChatInput = z.object({
   messages: z
@@ -23,6 +24,7 @@ const BASE_SYSTEM_PROMPT = `أنت "NexLaw AI"، المساعد الذكي دا�
 إذا زُوِّدت ببيانات فعلية عن مكتب المستخدم (فواتير، عقود...)، استخدمها مباشرة في إجابتك واعتبرها المصدر الوحيد الموثوق لهذه الأرقام — لا تخترع أرقامًا غير موجودة فيها، وإذا كانت القائمة فارغة أخبر المستخدم بوضوح أنه لا يوجد شيء مطابق حاليًا.`;
 
 export const chatWithAssistant = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => ChatInput.parse(input))
   .handler(async ({ data }): Promise<string> => {
     const key = process.env.LOVABLE_API_KEY;
