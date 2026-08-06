@@ -1,13 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState, useRef } from "react";
-import { ArrowRight, Plus, FolderClosed, Loader2, X, AlertCircle, Download, FileText as FileIcon, Trash2 } from "lucide-react";
+import { ArrowRight, Plus, FolderClosed, Loader2, X, AlertCircle, Download, Eye, FileText as FileIcon, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { requireOrgSession } from "@/lib/require-org-session";
 import { AppShell } from "@/components/AppShell";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 
 type Document = Tables<"documents">;
+type PreviewState = { url: string; title: string; type: string | null };
 
 function documentsQueryOptions(organizationId: string) {
   return {
@@ -42,14 +43,31 @@ function formatSize(bytes: number | null) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} ميغابايت`;
 }
 
+function canPreview(type: string | null) {
+  return type === "application/pdf" || (type?.startsWith("image/") ?? false);
+}
+
 function DocumentsPage() {
   const { user, organization } = Route.useRouteContext();
   const queryClient = useQueryClient();
   const { data: documents } = useSuspenseQuery(documentsQueryOptions(organization.id));
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [previewDoc, setPreviewDoc] = useState<PreviewState | null>(null);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["documents", organization.id] });
+
+  const handlePreview = async (doc: Document) => {
+    setError(null);
+    const { data, error: urlError } = await supabase.storage
+      .from("documents")
+      .createSignedUrl(doc.file_path, 300);
+    if (urlError || !data) {
+      setError("تعذّر إنشاء رابط المعاينة");
+      return;
+    }
+    setPreviewDoc({ url: data.signedUrl, title: doc.title, type: doc.file_type });
+  };
 
   const handleDownload = async (doc: Document) => {
     setError(null);
@@ -124,6 +142,15 @@ function DocumentsPage() {
                     <div className="text-sm font-medium truncate">{d.title}</div>
                     <div className="text-xs text-muted-foreground mt-0.5">{formatSize(d.file_size)}</div>
                   </div>
+                  {canPreview(d.file_type) && (
+                    <button
+                      onClick={() => handlePreview(d)}
+                      title="معاينة"
+                      className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-navy transition"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                  )}
                   <button
                     onClick={() => handleDownload(d)}
                     title="تنزيل"
@@ -144,6 +171,35 @@ function DocumentsPage() {
           )}
         </div>
       </div>
+
+      {previewDoc && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+          onClick={() => setPreviewDoc(null)}
+        >
+          <div
+            className="bg-card rounded-2xl border border-border w-full max-w-3xl h-[85vh] flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
+              <span className="font-bold text-navy truncate">{previewDoc.title}</span>
+              <button
+                onClick={() => setPreviewDoc(null)}
+                className="p-2 rounded-full hover:bg-muted text-muted-foreground"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex-1 min-h-0 bg-muted/30">
+              {previewDoc.type?.startsWith("image/") ? (
+                <img src={previewDoc.url} alt={previewDoc.title} className="w-full h-full object-contain" />
+              ) : (
+                <iframe src={previewDoc.url} title={previewDoc.title} className="w-full h-full" />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }
