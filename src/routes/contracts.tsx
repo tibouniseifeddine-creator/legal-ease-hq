@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ArrowRight, Plus, FileText, Loader2, X, AlertCircle, Wand2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { requireOrgSession } from "@/lib/require-org-session";
@@ -16,6 +16,14 @@ const TYPE_LABELS: Record<string, string> = {
   rental: "إيجار",
   promise_to_sell: "وعد بالبيع",
   other: "أخرى",
+};
+
+const PROPERTY_TYPE_LABELS: Record<string, string> = {
+  apartment: "شقة",
+  house: "منزل",
+  land: "أرض",
+  commercial: "محل تجاري",
+  office: "مكتب",
 };
 
 const ROLE_LABELS: Record<string, { a: string; b: string }> = {
@@ -298,6 +306,38 @@ function NameAutocomplete({
   );
 }
 
+function PropertyTitleAutocomplete({
+  value, onChange, properties, onMatch,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  properties: Property[];
+  onMatch: (property: Property | null) => void;
+}) {
+  return (
+    <div>
+      <label className="text-sm font-semibold text-navy">اسم العقار</label>
+      <input
+        type="text"
+        list="properties-datalist"
+        value={value}
+        onChange={(e) => {
+          const v = e.target.value;
+          onChange(v);
+          onMatch(properties.find((p) => p.title === v) ?? null);
+        }}
+        placeholder="اكتب اسم العقار أو اختره من الاقتراحات"
+        className="mt-2 w-full h-11 rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none px-4 text-sm"
+      />
+      <datalist id="properties-datalist">
+        {properties.map((p) => (
+          <option key={p.id} value={p.title} />
+        ))}
+      </datalist>
+    </div>
+  );
+}
+
 function NewContractForm({
   organizationId,
   clients,
@@ -316,9 +356,13 @@ function NewContractForm({
   const [contractType, setContractType] = useState("sale");
   const [status, setStatus] = useState("draft");
   const [clientId, setClientId] = useState("");
-  const [propertyId, setPropertyId] = useState("");
+  const [propertyTitle, setPropertyTitle] = useState("");
+  const [propertyType, setPropertyType] = useState("apartment");
+  const [propertyCity, setPropertyCity] = useState("");
+  const [propertyAddress, setPropertyAddress] = useState("");
   const [propertyPrice, setPropertyPrice] = useState("");
   const [propertyArea, setPropertyArea] = useState("");
+  const [matchedPropertyId, setMatchedPropertyId] = useState<string | null>(null);
   const [contractDate, setContractDate] = useState(today);
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
@@ -337,11 +381,18 @@ function NewContractForm({
 
   const roles = ROLE_LABELS[contractType] ?? ROLE_LABELS.other;
 
-  useEffect(() => {
-    const property = properties.find((p) => p.id === propertyId);
-    setPropertyPrice(property?.price != null ? String(property.price) : "");
-    setPropertyArea(property?.area != null ? String(property.area) : "");
-  }, [propertyId, properties]);
+  const handlePropertyMatch = (property: Property | null) => {
+    if (!property) {
+      setMatchedPropertyId(null);
+      return;
+    }
+    setMatchedPropertyId(property.id);
+    setPropertyType(property.property_type);
+    setPropertyCity(property.city ?? "");
+    setPropertyAddress(property.address ?? "");
+    setPropertyPrice(property.price != null ? String(property.price) : "");
+    setPropertyArea(property.area != null ? String(property.area) : "");
+  };
 
   const fillFromClient = (client: Client | null, setNationalId: (v: string) => void, setPhone: (v: string) => void) => {
     if (!client) return;
@@ -355,15 +406,14 @@ function NewContractForm({
   };
 
   const handleGenerate = () => {
-    const property = properties.find((p) => p.id === propertyId);
     const text = generateContractText({
       type: contractType,
       partyAName: partyAName.trim(),
       partyANationalId: partyANationalId.trim(),
       partyBName: partyBName.trim(),
       partyBNationalId: partyBNationalId.trim(),
-      propertyTitle: property?.title ?? "",
-      propertyAddress: property ? [property.address, property.city].filter(Boolean).join("، ") : "",
+      propertyTitle: propertyTitle.trim(),
+      propertyAddress: [propertyAddress.trim(), propertyCity.trim()].filter(Boolean).join("، "),
       propertyArea: propertyArea.trim() ? Number(propertyArea) : null,
       price: propertyPrice.trim() ? Number(propertyPrice) : null,
       date: contractDate,
@@ -373,8 +423,8 @@ function NewContractForm({
       witness2NationalId: witness2NationalId.trim(),
     });
     setContent(text);
-    if (!title.trim() && property) {
-      setTitle(`${TYPE_LABELS[contractType]} — ${property.title}`);
+    if (!title.trim() && propertyTitle.trim()) {
+      setTitle(`${TYPE_LABELS[contractType]} — ${propertyTitle.trim()}`);
     }
   };
 
@@ -383,13 +433,65 @@ function NewContractForm({
     setLoading(true);
     setError(null);
 
+    let finalPropertyId: string | null = null;
+
+    if (propertyTitle.trim()) {
+      const matched = matchedPropertyId ? properties.find((p) => p.id === matchedPropertyId) : null;
+      const stillMatches = matched && matched.title === propertyTitle.trim();
+      const newPrice = propertyPrice.trim() ? Number(propertyPrice) : null;
+      const newArea = propertyArea.trim() ? Number(propertyArea) : null;
+
+      if (stillMatches && matched) {
+        finalPropertyId = matched.id;
+        if (
+          newPrice !== matched.price ||
+          newArea !== matched.area ||
+          propertyCity.trim() !== (matched.city ?? "") ||
+          propertyAddress.trim() !== (matched.address ?? "") ||
+          propertyType !== matched.property_type
+        ) {
+          await supabase
+            .from("properties")
+            .update({
+              property_type: propertyType,
+              city: propertyCity.trim() || null,
+              address: propertyAddress.trim() || null,
+              price: newPrice,
+              area: newArea,
+            })
+            .eq("id", matched.id);
+        }
+      } else {
+        const { data: newProperty, error: propertyError } = await supabase
+          .from("properties")
+          .insert({
+            organization_id: organizationId,
+            title: propertyTitle.trim(),
+            property_type: propertyType,
+            city: propertyCity.trim() || null,
+            address: propertyAddress.trim() || null,
+            price: newPrice,
+            area: newArea,
+          })
+          .select()
+          .single();
+
+        if (propertyError) {
+          setLoading(false);
+          setError(propertyError.message);
+          return;
+        }
+        finalPropertyId = newProperty.id;
+      }
+    }
+
     const payload: TablesInsert<"contracts"> = {
       organization_id: organizationId,
       title: title.trim(),
       contract_type: contractType,
       status,
       client_id: clientId || null,
-      property_id: propertyId || null,
+      property_id: finalPropertyId,
       content: content.trim() || null,
       contract_date: contractDate,
       party_a_name: partyAName.trim() || null,
@@ -406,22 +508,13 @@ function NewContractForm({
 
     const { error: insertError } = await supabase.from("contracts").insert(payload);
 
+    setLoading(false);
+
     if (insertError) {
-      setLoading(false);
       setError(insertError.message);
       return;
     }
 
-    if (propertyId) {
-      const original = properties.find((p) => p.id === propertyId);
-      const newPrice = propertyPrice.trim() ? Number(propertyPrice) : null;
-      const newArea = propertyArea.trim() ? Number(propertyArea) : null;
-      if (original && (newPrice !== original.price || newArea !== original.area)) {
-        await supabase.from("properties").update({ price: newPrice, area: newArea }).eq("id", propertyId);
-      }
-    }
-
-    setLoading(false);
     onCreated();
     onDone();
   };
@@ -473,25 +566,43 @@ function NewContractForm({
             ))}
           </select>
         </div>
-        <div>
-          <label className="text-sm font-semibold text-navy">العقار</label>
-          <select
-            value={propertyId}
-            onChange={(e) => setPropertyId(e.target.value)}
-            className="mt-2 w-full h-11 rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none px-4 text-sm"
-          >
-            <option value="">— بدون —</option>
-            {properties.map((p) => (
-              <option key={p.id} value={p.id}>{p.title}</option>
-            ))}
-          </select>
+      </div>
+
+      <div className="pt-2 border-t border-border">
+        <h3 className="text-sm font-bold text-navy mb-3">العقار</h3>
+        <p className="text-xs text-muted-foreground mb-3">
+          اكتب اسم عقار موجود لتُملأ بياناته تلقائيًا، أو اسم عقار جديد ليُحفَظ تلقائيًا في صفحة العقارات عند حفظ العقد.
+        </p>
+        <div className="grid sm:grid-cols-3 gap-4">
+          <PropertyTitleAutocomplete
+            value={propertyTitle}
+            onChange={(v) => {
+              setPropertyTitle(v);
+              if (matchedPropertyId) {
+                const stillMatches = properties.find((p) => p.id === matchedPropertyId)?.title === v;
+                if (!stillMatches) setMatchedPropertyId(null);
+              }
+            }}
+            properties={properties}
+            onMatch={handlePropertyMatch}
+          />
+          <div>
+            <label className="text-sm font-semibold text-navy">النوع</label>
+            <select
+              value={propertyType}
+              onChange={(e) => setPropertyType(e.target.value)}
+              className="mt-2 w-full h-11 rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none px-4 text-sm"
+            >
+              {Object.entries(PROPERTY_TYPE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </div>
+          <Field label="المدينة" value={propertyCity} onChange={setPropertyCity} placeholder="مثال: الجزائر العاصمة" />
+          <Field label="العنوان التفصيلي" value={propertyAddress} onChange={setPropertyAddress} />
+          <Field label="السعر (دج)" value={propertyPrice} onChange={setPropertyPrice} type="number" />
+          <Field label="المساحة (م²)" value={propertyArea} onChange={setPropertyArea} type="number" />
         </div>
-        {propertyId && (
-          <>
-            <Field label="سعر العقار (دج)" value={propertyPrice} onChange={setPropertyPrice} type="number" />
-            <Field label="مساحة العقار (م²)" value={propertyArea} onChange={setPropertyArea} type="number" />
-          </>
-        )}
       </div>
 
       <div className="pt-2 border-t border-border">
