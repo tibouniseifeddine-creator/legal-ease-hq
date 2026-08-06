@@ -1,13 +1,19 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ArrowRight, Settings as SettingsIcon, Loader2, AlertCircle, CheckCircle2, LogOut } from "lucide-react";
+import { ArrowRight, Settings as SettingsIcon, Loader2, AlertCircle, CheckCircle2, LogOut, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { requireOrgSession } from "@/lib/require-org-session";
 import { AppShell } from "@/components/AppShell";
+import { sendInviteEmail } from "@/lib/invite-email.functions";
 
 const PLAN_LABELS: Record<string, string> = {
   basic: "أساسية", professional: "احترافية", enterprise: "مؤسسات",
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: "مدير", member: "عضو",
 };
 
 function myRoleQueryOptions(organizationId: string, userId: string) {
@@ -73,6 +79,7 @@ function SettingsPage() {
   const { user, organization } = Route.useRouteContext();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const runSendInviteEmail = useServerFn(sendInviteEmail);
   const { data: role } = useSuspenseQuery(myRoleQueryOptions(organization.id, user.id));
   const { data: members } = useSuspenseQuery(orgMembersQueryOptions(organization.id));
   const { data: invites } = useSuspenseQuery(orgInvitesQueryOptions(organization.id));
@@ -82,23 +89,66 @@ function SettingsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [creatingInvite, setCreatingInvite] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
+  const [sendingInvite, setSendingInvite] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
 
   const displayName =
     (typeof user.user_metadata?.full_name === "string" && user.user_metadata.full_name.trim()) || "";
 
-  const handleCreateInvite = async (inviteRole: "admin" | "member") => {
-    setCreatingInvite(true);
+  const handleCreateInviteLink = async (role: "admin" | "member") => {
     const code = crypto.randomUUID().replace(/-/g, "");
     await supabase.from("organization_invites").insert({
+      organization_id: organization.id,
+      code,
+      role,
+      created_by: user.id,
+    });
+    queryClient.invalidateQueries({ queryKey: ["org-invites", organization.id] });
+  };
+
+  const handleSendInviteEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSendingInvite(true);
+    setInviteError(null);
+    setInviteSuccess(null);
+
+    const code = crypto.randomUUID().replace(/-/g, "");
+    const { error: insertError } = await supabase.from("organization_invites").insert({
       organization_id: organization.id,
       code,
       role: inviteRole,
       created_by: user.id,
     });
-    setCreatingInvite(false);
+
+    if (insertError) {
+      setSendingInvite(false);
+      setInviteError(insertError.message);
+      return;
+    }
+
     queryClient.invalidateQueries({ queryKey: ["org-invites", organization.id] });
+
+    try {
+      await runSendInviteEmail({
+        data: {
+          toEmail: inviteEmail.trim(),
+          organizationName: organization.name,
+          inviteUrl: `${window.location.origin}/join/${code}`,
+          roleLabel: ROLE_LABELS[inviteRole],
+        },
+      });
+      setInviteSuccess(`تم إرسال الدعوة إلى ${inviteEmail.trim()}.`);
+      setInviteEmail("");
+    } catch (err) {
+      setInviteError(err instanceof Error ? err.message : "تعذّر إرسال البريد، لكن رابط الدعوة أُنشئ بنجاح ويمكن مشاركته يدويًا.");
+    } finally {
+      setSendingInvite(false);
+    }
   };
 
   const handleDeactivateInvite = async (inviteId: string) => {
@@ -206,21 +256,61 @@ function SettingsPage() {
           </ul>
 
           {canEditOrg && (
-            <div className="mt-5 pt-5 border-t border-border space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-navy">دعوة عضو جديد</span>
+            <div className="mt-5 pt-5 border-t border-border space-y-5">
+              <form onSubmit={handleSendInviteEmail} className="space-y-3">
+                <span className="text-sm font-semibold text-navy">دعوة عضو جديد بالبريد الإلكتروني</span>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <input
+                    type="email"
+                    required
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    className="flex-1 h-11 rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none px-4 text-sm"
+                  />
+                  <select
+                    value={inviteRole}
+                    onChange={(e) => setInviteRole(e.target.value as "admin" | "member")}
+                    className="h-11 rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none px-3 text-sm"
+                  >
+                    <option value="member">عضو</option>
+                    <option value="admin">مدير</option>
+                  </select>
+                  <button
+                    type="submit"
+                    disabled={sendingInvite || !inviteEmail.trim()}
+                    className="inline-flex items-center justify-center gap-2 bg-gold text-gold-foreground rounded-xl h-11 px-5 text-sm font-bold hover:brightness-95 transition disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                  >
+                    {sendingInvite ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                    إرسال
+                  </button>
+                </div>
+                {inviteError && (
+                  <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-200 text-red-700 p-3 text-sm">
+                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                    <span>{inviteError}</span>
+                  </div>
+                )}
+                {inviteSuccess && (
+                  <div className="flex items-start gap-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 p-3 text-sm">
+                    <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
+                    <span>{inviteSuccess}</span>
+                  </div>
+                )}
+              </form>
+
+              <div className="flex items-center justify-between pt-2 border-t border-border">
+                <span className="text-sm font-semibold text-navy">أو أنشئ رابطًا لمشاركته يدويًا</span>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => handleCreateInvite("member")}
-                    disabled={creatingInvite}
-                    className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-muted hover:bg-accent disabled:opacity-50"
+                    onClick={() => handleCreateInviteLink("member")}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-muted hover:bg-accent"
                   >
                     كعضو
                   </button>
                   <button
-                    onClick={() => handleCreateInvite("admin")}
-                    disabled={creatingInvite}
-                    className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-muted hover:bg-accent disabled:opacity-50"
+                    onClick={() => handleCreateInviteLink("admin")}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-muted hover:bg-accent"
                   >
                     كمدير
                   </button>
@@ -249,7 +339,7 @@ function SettingsPage() {
               )}
 
               <p className="text-xs text-muted-foreground">
-                شارك رابط الدعوة يدويًا (واتساب، بريد...). لا تنتهي صلاحيته، ويُستخدم مرة واحدة فقط — يمكنك إلغاؤه في أي وقت.
+                روابط الدعوة لا تنتهي صلاحيتها، وتُستخدم مرة واحدة فقط — يمكنك إلغاؤها في أي وقت.
               </p>
             </div>
           )}
