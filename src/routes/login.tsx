@@ -211,11 +211,11 @@ function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {mode === "signup" && (
                 <>
-                  <required label="الاسم الكامل" value={fullName} onChange={setFullName} placeholder="مثال: أحمد بن علي" />
-                  <required label="اسم المكتب" value={orgName} onChange={setOrgName} placeholder="مثال: مكتب النصر للتوثيق" />
+                  <Field required label="الاسم الكامل" value={fullName} onChange={setFullName} placeholder="مثال: أحمد بن علي" />
+                  <Field required label="اسم المكتب" value={orgName} onChange={setOrgName} placeholder="مثال: مكتب النصر للتوثيق" />
                 </>
               )}
-              <required label="البريد الإلكتروني" value={email} onChange={setEmail} type="email" placeholder="name@example.com" />
+              <Field required label="البريد الإلكتروني" value={email} onChange={setEmail} type="email" placeholder="name@example.com" />
               <PasswordField
                 label="كلمة المرور"
                 value={password}

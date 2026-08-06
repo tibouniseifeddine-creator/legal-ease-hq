@@ -7,6 +7,8 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
@@ -588,11 +590,11 @@ export type Database = {
       list_org_members: {
         Args: { org_id: string }
         Returns: {
-          membership_id: string
-          user_id: string
-          role: string
           email: string
           joined_at: string
+          membership_id: string
+          role: string
+          user_id: string
         }[]
       }
       redeem_invite: {
@@ -603,8 +605,13 @@ export type Database = {
           name: string
           plan: string
         }
+        SetofOptions: {
+          from: "*"
+          to: "organizations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
-      set_updated_at: { Args: Record<PropertyKey, never>; Returns: unknown }
     }
     Enums: {
       [_ in never]: never
@@ -619,7 +626,8 @@ type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
 type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
-export type Tables<DefaultSchemaTableNameOrOptions extends
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
@@ -647,7 +655,8 @@ export type Tables<DefaultSchemaTableNameOrOptions extends
       : never
     : never
 
-export type TablesInsert<DefaultSchemaTableNameOrOptions extends
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
@@ -671,7 +680,8 @@ export type TablesInsert<DefaultSchemaTableNameOrOptions extends
       : never
     : never
 
-export type TablesUpdate<DefaultSchemaTableNameOrOptions extends
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
@@ -695,7 +705,8 @@ export type TablesUpdate<DefaultSchemaTableNameOrOptions extends
       : never
     : never
 
-export type Enums<DefaultSchemaEnumNameOrOptions extends
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
@@ -711,7 +722,8 @@ export type Enums<DefaultSchemaEnumNameOrOptions extends
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
-export type CompositeTypes<PublicCompositeTypeNameOrOptions extends
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
