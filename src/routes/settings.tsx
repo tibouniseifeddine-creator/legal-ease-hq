@@ -83,6 +83,7 @@ function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [creatingInvite, setCreatingInvite] = useState(false);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   const displayName =
     (typeof user.user_metadata?.full_name === "string" && user.user_metadata.full_name.trim()) || "";
@@ -274,7 +275,7 @@ function SettingsPage() {
           </div>
 
           <button
-            onClick={handleSignOut}
+            onClick={() => setShowSignOutConfirm(true)}
             className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-red-600 hover:underline"
           >
             <LogOut className="w-4 h-4" />
@@ -282,6 +283,35 @@ function SettingsPage() {
           </button>
         </section>
       </div>
+
+      {showSignOutConfirm && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+          onClick={() => setShowSignOutConfirm(false)}
+        >
+          <div
+            className="bg-card rounded-2xl border border-border p-6 max-w-sm w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-bold text-navy mb-2">تسجيل الخروج</h3>
+            <p className="text-sm text-muted-foreground mb-5">هل أنت متأكد أنك تريد تسجيل الخروج من حسابك؟</p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleSignOut}
+                className="flex-1 bg-red-600 text-white rounded-xl h-11 font-bold hover:brightness-95 transition"
+              >
+                تسجيل الخروج
+              </button>
+              <button
+                onClick={() => setShowSignOutConfirm(false)}
+                className="flex-1 bg-muted rounded-xl h-11 font-bold hover:bg-accent transition"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }
