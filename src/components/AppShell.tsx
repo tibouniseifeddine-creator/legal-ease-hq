@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import {
   Home, Users, Building2, FileText, FolderClosed, CheckSquare,
-  Calendar, Receipt, BarChart3, Settings, Brain, LogOut, ScanSearch,
+  Calendar, Receipt, BarChart3, Settings, Brain, LogOut, ScanSearch, ArrowRight,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CommandPalette } from "@/components/CommandPalette";
@@ -113,6 +113,15 @@ export function AppShell({
               <div className="text-xs text-muted-foreground truncate">
                 {subtitle ?? organization.name}
               </div>
+              {pathname !== "/" && (
+                <Link
+                  to="/"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-navy mt-1"
+                >
+                  <ArrowRight className="w-3.5 h-3.5" />
+                  العودة للوحة التحكم
+                </Link>
+              )}
             </div>
             {actions}
             <CommandPalette organizationId={organization.id} />
