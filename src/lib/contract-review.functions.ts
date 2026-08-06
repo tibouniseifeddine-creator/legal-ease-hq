@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { generateText, Output, NoObjectGeneratedError } from "ai";
 import { z } from "zod";
 import { createLovableAiGatewayProvider } from "./ai-gateway.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const ReviewInput = z.object({
   contractText: z.string().min(20, "النص قصير جدًا").max(20000),
@@ -41,6 +42,7 @@ const SYSTEM_PROMPT = `أنت مساعد قانوني خبير في مراجعة
 كل النصوص باللغة العربية الفصحى الواضحة، مختصرة ومهنية.`;
 
 export const reviewContract = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => ReviewInput.parse(input))
   .handler(async ({ data }): Promise<ContractReview> => {
     const key = process.env.LOVABLE_API_KEY;
