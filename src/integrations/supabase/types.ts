@@ -616,6 +616,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      send_daily_notifications: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
