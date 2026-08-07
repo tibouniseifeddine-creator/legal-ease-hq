@@ -64,6 +64,22 @@ function contractsListQueryOptions(organizationId: string) {
   };
 }
 
+function myRoleQueryOptions(organizationId: string, userId: string) {
+  return {
+    queryKey: ["my-role", organizationId, userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("organization_members")
+        .select("role")
+        .eq("organization_id", organizationId)
+        .eq("user_id", userId)
+        .single();
+      if (error) throw error;
+      return data.role as string;
+    },
+  };
+}
+
 export const Route = createFileRoute("/invoices")({
   beforeLoad: requireOrgSession,
   loader: async ({ context }) => {
@@ -71,6 +87,7 @@ export const Route = createFileRoute("/invoices")({
       context.queryClient.ensureQueryData(invoicesQueryOptions(context.organization.id)),
       context.queryClient.ensureQueryData(clientsListQueryOptions(context.organization.id)),
       context.queryClient.ensureQueryData(contractsListQueryOptions(context.organization.id)),
+      context.queryClient.ensureQueryData(myRoleQueryOptions(context.organization.id, context.user.id)),
     ]);
   },
   head: () => ({
@@ -85,6 +102,8 @@ function InvoicesPage() {
   const { data: invoices } = useSuspenseQuery(invoicesQueryOptions(organization.id));
   const { data: clients } = useSuspenseQuery(clientsListQueryOptions(organization.id));
   const { data: contracts } = useSuspenseQuery(contractsListQueryOptions(organization.id));
+  const { data: role } = useSuspenseQuery(myRoleQueryOptions(organization.id, user.id));
+  const canManage = role === "owner" || role === "admin";
   const [showForm, setShowForm] = useState(false);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["invoices", organization.id] });
@@ -116,17 +135,22 @@ function InvoicesPage() {
         </div>
 
         <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">{invoices.length} فاتورة</div>
-          <button
-            onClick={() => setShowForm((v) => !v)}
-            className="inline-flex items-center gap-2 bg-gold text-gold-foreground rounded-xl px-4 py-2.5 text-sm font-bold hover:brightness-95 transition"
-          >
-            {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-            {showForm ? "إلغاء" : "فاتورة جديدة"}
-          </button>
+          <div className="text-sm text-muted-foreground">
+            {invoices.length} فاتورة
+            {!canManage && <span className="mr-2">— عرض فقط</span>}
+          </div>
+          {canManage && (
+            <button
+              onClick={() => setShowForm((v) => !v)}
+              className="inline-flex items-center gap-2 bg-gold text-gold-foreground rounded-xl px-4 py-2.5 text-sm font-bold hover:brightness-95 transition"
+            >
+              {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              {showForm ? "إلغاء" : "فاتورة جديدة"}
+            </button>
+          )}
         </div>
 
-        {showForm && (
+        {canManage && showForm && (
           <NewInvoiceForm
             organizationId={organization.id}
             clients={clients}
@@ -143,7 +167,9 @@ function InvoicesPage() {
                 <Receipt className="w-7 h-7 text-gold" />
               </div>
               <h2 className="mt-4 font-bold text-navy text-lg">لا يوجد فواتير بعد</h2>
-              <p className="mt-2 text-sm text-muted-foreground">اضغط "فاتورة جديدة" لإنشاء أول فاتورة لمكتبك.</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {canManage ? 'اضغط "فاتورة جديدة" لإنشاء أول فاتورة لمكتبك.' : "لا توجد فواتير مسجَّلة حاليًا."}
+              </p>
             </div>
           ) : (
             <table className="w-full text-sm">
@@ -164,15 +190,19 @@ function InvoicesPage() {
                       <td className="px-5 py-3 text-muted-foreground tabular-nums">{Number(inv.amount).toLocaleString("ar-DZ")} دج</td>
                       <td className="px-5 py-3 text-muted-foreground tabular-nums">{inv.due_date || "—"}</td>
                       <td className="px-5 py-3">
-                        <select
-                          value={inv.status}
-                          onChange={(e) => setStatus(inv, e.target.value)}
-                          className={`text-[11px] font-semibold px-2 py-1 rounded-md border-0 focus:outline-none focus:ring-1 focus:ring-gold ${st.cls}`}
-                        >
-                          {Object.entries(STATUS_LABELS).map(([value, { label }]) => (
-                            <option key={value} value={value}>{label}</option>
-                          ))}
-                        </select>
+                        {canManage ? (
+                          <select
+                            value={inv.status}
+                            onChange={(e) => setStatus(inv, e.target.value)}
+                            className={`text-[11px] font-semibold px-2 py-1 rounded-md border-0 focus:outline-none focus:ring-1 focus:ring-gold ${st.cls}`}
+                          >
+                            {Object.entries(STATUS_LABELS).map(([value, { label }]) => (
+                              <option key={value} value={value}>{label}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-md ${st.cls}`}>{st.label}</span>
+                        )}
                       </td>
                     </tr>
                   );
