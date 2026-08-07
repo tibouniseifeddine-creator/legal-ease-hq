@@ -25,8 +25,11 @@ function alertsQueryOptions(organizationId: string) {
       todayStart.setHours(0, 0, 0, 0);
       const todayEnd = new Date(today);
       todayEnd.setHours(23, 59, 59, 999);
+      const in7Days = new Date(today);
+      in7Days.setDate(in7Days.getDate() + 7);
+      const in7DaysStr = in7Days.toISOString().slice(0, 10);
 
-      const [overdueRes, appointmentsRes] = await Promise.all([
+      const [overdueRes, appointmentsRes, expiringContractsRes] = await Promise.all([
         supabase
           .from("invoices")
           .select("id, title, due_date")
@@ -44,9 +47,19 @@ function alertsQueryOptions(organizationId: string) {
           .lte("due_at", todayEnd.toISOString())
           .order("due_at", { ascending: true })
           .limit(5),
+        supabase
+          .from("contracts")
+          .select("id, title, end_date")
+          .eq("organization_id", organizationId)
+          .not("end_date", "is", null)
+          .gte("end_date", todayDateStr)
+          .lte("end_date", in7DaysStr)
+          .order("end_date", { ascending: true })
+          .limit(5),
       ]);
       if (overdueRes.error) throw overdueRes.error;
       if (appointmentsRes.error) throw appointmentsRes.error;
+      if (expiringContractsRes.error) throw expiringContractsRes.error;
 
       const result: DashboardAlert[] = [];
       for (const inv of overdueRes.data ?? []) {
@@ -66,6 +79,14 @@ function alertsQueryOptions(organizationId: string) {
           dot: "bg-sky-500",
           title: t.title,
           subtitle: time ? `موعد اليوم ${time}` : "موعد اليوم",
+        });
+      }
+      for (const c of expiringContractsRes.data ?? []) {
+        result.push({
+          id: `contract-${c.id}`,
+          dot: "bg-amber-500",
+          title: c.title,
+          subtitle: `ينتهي بتاريخ ${c.end_date}`,
         });
       }
       return result;
@@ -114,7 +135,7 @@ function dashboardStatsQueryOptions(organizationId: string) {
 }
 
 const CONTRACT_TYPE_LABELS: Record<string, string> = {
-  sale: "بيع", rental: "إيجار", promise_to_sell: "وعد بالبيع", other: "أخرى",
+  sale: "بيع", rental: "إيجار", promise_to_sell: "وعد بالبيع", agency: "وكالة", other: "أخرى",
 };
 const CONTRACT_STATUS_STYLES: Record<string, { label: string; cls: string }> = {
   draft: { label: "مسودة", cls: "bg-muted text-muted-foreground" },
@@ -200,19 +221,6 @@ export const Route = createFileRoute("/")({
   component: Dashboard,
 });
 
-const navItems: Array<{ icon: typeof Home; label: string; active?: boolean; to?: string }> = [
-  { icon: Home, label: "لوحة التحكم", active: true },
-  { icon: Users, label: "العملاء", to: "/clients" },
-  { icon: Building2, label: "العقارات", to: "/properties" },
-  { icon: FileText, label: "العقود", to: "/contracts" },
-  { icon: FolderClosed, label: "الوثائق", to: "/documents" },
-  { icon: CheckSquare, label: "المهام", to: "/tasks" },
-  { icon: Calendar, label: "المواعيد", to: "/tasks" },
-  { icon: Receipt, label: "الفواتير", to: "/invoices" },
-  { icon: BarChart3, label: "التقارير", to: "/reports" },
-  { icon: Settings, label: "الإعدادات", to: "/settings" },
-];
-
 const statMeta = [
   { key: "clients" as const, label: "العملاء", icon: Users, tint: "bg-indigo-100 text-indigo-600" },
   { key: "contracts" as const, label: "العقود", icon: FileText, tint: "bg-amber-100 text-amber-600" },
@@ -231,7 +239,6 @@ const quickActions: Array<{ icon: typeof FilePlus; label: string; to?: string; h
 
 function Dashboard() {
   const { user, organization } = Route.useRouteContext();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: alerts } = useSuspenseQuery(alertsQueryOptions(organization.id));
   const { data: recentClients } = useSuspenseQuery(recentClientsQueryOptions(organization.id));
@@ -242,12 +249,6 @@ function Dashboard() {
     (typeof user.user_metadata?.full_name === "string" && user.user_metadata.full_name.trim()) ||
     user.email ||
     "مستخدم";
-  const initials = displayName.trim().charAt(0) || "؟";
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    navigate({ to: "/login" });
-  };
 
   const toggleTaskDone = async (taskId: string, current: boolean) => {
     await supabase.from("tasks").update({ is_done: !current }).eq("id", taskId);
