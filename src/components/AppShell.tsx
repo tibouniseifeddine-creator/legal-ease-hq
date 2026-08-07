@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import {
   Home, Users, Building2, FileText, FolderClosed, CheckSquare,
-  Calendar, Receipt, BarChart3, Settings, Brain, LogOut, ScanSearch, ArrowRight,
+  Calendar, Receipt, BarChart3, Settings, Brain, LogOut, ScanSearch, ArrowRight, Menu, X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CommandPalette } from "@/components/CommandPalette";
@@ -40,6 +40,7 @@ export function AppShell({
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const displayName =
     (typeof user.user_metadata?.full_name === "string" && user.user_metadata.full_name.trim()) ||
@@ -54,8 +55,22 @@ export function AppShell({
 
   return (
     <div className="min-h-screen bg-background flex" dir="rtl">
-      <aside className="w-64 shrink-0 bg-navy text-navy-foreground flex flex-col min-h-screen sticky top-0">
-        <div className="p-5 border-b border-white/10">
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      <aside
+        className={[
+          "w-64 shrink-0 bg-navy text-navy-foreground flex flex-col min-h-screen",
+          "fixed inset-y-0 right-0 z-50 transition-transform duration-200",
+          "md:sticky md:top-0 md:translate-x-0",
+          mobileMenuOpen ? "translate-x-0" : "translate-x-full",
+        ].join(" ")}
+      >
+        <div className="p-5 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-gold flex items-center justify-center">
               <Home className="w-5 h-5 text-navy" />
@@ -65,6 +80,12 @@ export function AppShell({
               <div className="text-[10px] text-white/60 mt-1">Legal &amp; Real Estate Workspace</div>
             </div>
           </div>
+          <button
+            onClick={() => setMobileMenuOpen(false)}
+            className="p-1.5 rounded-lg hover:bg-white/10 md:hidden"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
@@ -74,6 +95,7 @@ export function AppShell({
               <Link
                 key={item.to}
                 to={item.to}
+                onClick={() => setMobileMenuOpen(false)}
                 className={[
                   "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
                   active
@@ -98,6 +120,7 @@ export function AppShell({
           </p>
           <Link
             to="/assistant"
+            onClick={() => setMobileMenuOpen(false)}
             className="w-full inline-flex items-center justify-center bg-gold text-gold-foreground rounded-lg py-2 text-xs font-semibold hover:brightness-95 transition"
           >
             تحدث مع الذكاء الاصطناعي
@@ -107,7 +130,13 @@ export function AppShell({
 
       <div className="flex-1 min-w-0">
         <header className="sticky top-0 z-10 bg-background/85 backdrop-blur border-b border-border">
-          <div className="flex items-center gap-4 px-6 py-4">
+          <div className="flex items-center gap-3 px-4 sm:px-6 py-4">
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="p-2 rounded-lg hover:bg-muted text-muted-foreground shrink-0 md:hidden"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
             <div className="flex-1 min-w-0">
               <h1 className="font-bold text-navy text-lg truncate">{title}</h1>
               <div className="text-xs text-muted-foreground truncate">
@@ -125,18 +154,18 @@ export function AppShell({
             </div>
             {actions}
             <CommandPalette organizationId={organization.id} />
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <div className="text-left hidden sm:block">
                 <div className="text-sm font-semibold text-navy leading-none">{displayName}</div>
                 <div className="text-[11px] text-muted-foreground mt-1">{organization.name}</div>
               </div>
-              <div className="w-10 h-10 rounded-full bg-navy text-navy-foreground flex items-center justify-center font-bold">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-navy text-navy-foreground flex items-center justify-center font-bold shrink-0">
                 {initials}
               </div>
               <button
                 onClick={() => setShowSignOutConfirm(true)}
                 title="تسجيل الخروج"
-                className="p-2 rounded-lg hover:bg-muted text-muted-foreground"
+                className="p-2 rounded-lg hover:bg-muted text-muted-foreground shrink-0"
               >
                 <LogOut className="w-5 h-5" />
               </button>
@@ -144,7 +173,7 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="p-6">{children}</main>
+        <main className="p-4 sm:p-6">{children}</main>
       </div>
 
       {showSignOutConfirm && (
