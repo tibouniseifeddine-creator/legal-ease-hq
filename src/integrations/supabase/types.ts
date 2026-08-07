@@ -349,6 +349,45 @@ export type Database = {
           },
         ]
       }
+      job_failure_alerts: {
+        Row: {
+          acknowledged: boolean
+          detected_at: string
+          error_message: string | null
+          id: string
+          job_name: string
+          jobid: number | null
+          run_ended_at: string | null
+          run_started_at: string | null
+          runid: number | null
+          status: string
+        }
+        Insert: {
+          acknowledged?: boolean
+          detected_at?: string
+          error_message?: string | null
+          id?: string
+          job_name: string
+          jobid?: number | null
+          run_ended_at?: string | null
+          run_started_at?: string | null
+          runid?: number | null
+          status: string
+        }
+        Update: {
+          acknowledged?: boolean
+          detected_at?: string
+          error_message?: string | null
+          id?: string
+          job_name?: string
+          jobid?: number | null
+          run_ended_at?: string | null
+          run_started_at?: string | null
+          runid?: number | null
+          status?: string
+        }
+        Relationships: []
+      }
       organization_invites: {
         Row: {
           code: string
@@ -574,6 +613,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_scheduled_job_failures: { Args: never; Returns: undefined }
       create_organization_with_owner: {
         Args: { org_name: string }
         Returns: {
@@ -591,6 +631,18 @@ export type Database = {
       }
       is_org_admin: { Args: { org_id: string }; Returns: boolean }
       is_org_member: { Args: { org_id: string }; Returns: boolean }
+      list_job_runs: {
+        Args: never
+        Returns: {
+          end_time: string
+          job_name: string
+          jobid: number
+          return_message: string
+          runid: number
+          start_time: string
+          status: string
+        }[]
+      }
       list_org_members: {
         Args: { org_id: string }
         Returns: {
