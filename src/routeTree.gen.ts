@@ -17,6 +17,7 @@ import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as PropertiesRouteImport } from './routes/properties'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as JobLogsRouteImport } from './routes/job-logs'
 import { Route as InvoicesRouteImport } from './routes/invoices'
 import { Route as DocumentsRouteImport } from './routes/documents'
 import { Route as ContractsRouteImport } from './routes/contracts'
@@ -66,6 +67,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JobLogsRoute = JobLogsRouteImport.update({
+  id: '/job-logs',
+  path: '/job-logs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InvoicesRoute = InvoicesRouteImport.update({
@@ -127,6 +133,7 @@ export interface FileRoutesByFullPath {
   '/contracts': typeof ContractsRouteWithChildren
   '/documents': typeof DocumentsRoute
   '/invoices': typeof InvoicesRoute
+  '/job-logs': typeof JobLogsRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/properties': typeof PropertiesRoute
@@ -147,6 +154,7 @@ export interface FileRoutesByTo {
   '/contracts': typeof ContractsRouteWithChildren
   '/documents': typeof DocumentsRoute
   '/invoices': typeof InvoicesRoute
+  '/job-logs': typeof JobLogsRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/properties': typeof PropertiesRoute
@@ -168,6 +176,7 @@ export interface FileRoutesById {
   '/contracts': typeof ContractsRouteWithChildren
   '/documents': typeof DocumentsRoute
   '/invoices': typeof InvoicesRoute
+  '/job-logs': typeof JobLogsRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/properties': typeof PropertiesRoute
@@ -190,6 +199,7 @@ export interface FileRouteTypes {
     | '/contracts'
     | '/documents'
     | '/invoices'
+    | '/job-logs'
     | '/login'
     | '/privacy'
     | '/properties'
@@ -210,6 +220,7 @@ export interface FileRouteTypes {
     | '/contracts'
     | '/documents'
     | '/invoices'
+    | '/job-logs'
     | '/login'
     | '/privacy'
     | '/properties'
@@ -230,6 +241,7 @@ export interface FileRouteTypes {
     | '/contracts'
     | '/documents'
     | '/invoices'
+    | '/job-logs'
     | '/login'
     | '/privacy'
     | '/properties'
@@ -251,6 +263,7 @@ export interface RootRouteChildren {
   ContractsRoute: typeof ContractsRouteWithChildren
   DocumentsRoute: typeof DocumentsRoute
   InvoicesRoute: typeof InvoicesRoute
+  JobLogsRoute: typeof JobLogsRoute
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
   PropertiesRoute: typeof PropertiesRoute
@@ -318,6 +331,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/job-logs': {
+      id: '/job-logs'
+      path: '/job-logs'
+      fullPath: '/job-logs'
+      preLoaderRoute: typeof JobLogsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/invoices': {
@@ -424,6 +444,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContractsRoute: ContractsRouteWithChildren,
   DocumentsRoute: DocumentsRoute,
   InvoicesRoute: InvoicesRoute,
+  JobLogsRoute: JobLogsRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
   PropertiesRoute: PropertiesRoute,
@@ -437,13 +458,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

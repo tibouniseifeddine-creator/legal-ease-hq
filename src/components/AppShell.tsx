@@ -4,10 +4,11 @@ import type { ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import {
   Home, Users, Building2, FileText, FolderClosed, CheckSquare,
-  Calendar, Receipt, BarChart3, Settings, Brain, LogOut, ScanSearch, ArrowRight, Menu, X,
+  Calendar, Receipt, BarChart3, Settings, Brain, LogOut, ScanSearch, ArrowRight, Menu, X, Activity,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CommandPalette } from "@/components/CommandPalette";
+import { JobFailureBanner } from "@/components/JobFailureBanner";
 
 const navItems = [
   { icon: Home, label: "لوحة التحكم", to: "/" },
@@ -19,6 +20,7 @@ const navItems = [
   { icon: Receipt, label: "الفواتير", to: "/invoices" },
   { icon: BarChart3, label: "التقارير", to: "/reports" },
   { icon: ScanSearch, label: "مراجعة عقد بالذكاء", to: "/contract-review" },
+  { icon: Activity, label: "سجلات المهام", to: "/job-logs" },
   { icon: Settings, label: "الإعدادات", to: "/settings" },
 ] as const;
 
@@ -173,7 +175,10 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="p-4 sm:p-6">{children}</main>
+        <main className="p-4 sm:p-6">
+          <JobFailureBanner />
+          {children}
+        </main>
       </div>
 
       {showSignOutConfirm && (
