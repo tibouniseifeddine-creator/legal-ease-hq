@@ -175,7 +175,10 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="p-4 sm:p-6">{children}</main>
+        <main className="p-4 sm:p-6">
+          <JobFailureBanner />
+          {children}
+        </main>
       </div>
 
       {showSignOutConfirm && (
