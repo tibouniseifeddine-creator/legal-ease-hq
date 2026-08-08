@@ -90,35 +90,37 @@ function PropertiesPage() {
               <p className="mt-2 text-sm text-muted-foreground">اضغط "عقار جديد" لإضافة أول عقار لمكتبك.</p>
             </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs text-muted-foreground bg-muted/40">
-                  <th className="text-right font-medium px-5 py-3">العقار</th>
-                  <th className="text-right font-medium px-5 py-3">النوع</th>
-                  <th className="text-right font-medium px-5 py-3">المدينة</th>
-                  <th className="text-right font-medium px-5 py-3">السعر</th>
-                  <th className="text-right font-medium px-5 py-3">الحالة</th>
-                </tr>
-              </thead>
-              <tbody>
-                {properties.map((p) => {
-                  const st = STATUS_LABELS[p.status] ?? STATUS_LABELS.available;
-                  return (
-                    <tr key={p.id} className="border-t border-border">
-                      <td className="px-5 py-3 font-medium">{p.title}</td>
-                      <td className="px-5 py-3 text-muted-foreground">{TYPE_LABELS[p.property_type] ?? p.property_type}</td>
-                      <td className="px-5 py-3 text-muted-foreground">{p.city || "—"}</td>
-                      <td className="px-5 py-3 text-muted-foreground tabular-nums">
-                        {p.price != null ? Number(p.price).toLocaleString("ar-DZ") : "—"}
-                      </td>
-                      <td className="px-5 py-3">
-                        <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-md ${st.cls}`}>{st.label}</span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[640px]">
+                <thead>
+                  <tr className="text-xs text-muted-foreground bg-muted/40">
+                    <th className="text-right font-medium px-5 py-3">العقار</th>
+                    <th className="text-right font-medium px-5 py-3">النوع</th>
+                    <th className="text-right font-medium px-5 py-3">المدينة</th>
+                    <th className="text-right font-medium px-5 py-3">السعر</th>
+                    <th className="text-right font-medium px-5 py-3">الحالة</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {properties.map((p) => {
+                    const st = STATUS_LABELS[p.status] ?? STATUS_LABELS.available;
+                    return (
+                      <tr key={p.id} className="border-t border-border">
+                        <td className="px-5 py-3 font-medium">{p.title}</td>
+                        <td className="px-5 py-3 text-muted-foreground">{TYPE_LABELS[p.property_type] ?? p.property_type}</td>
+                        <td className="px-5 py-3 text-muted-foreground">{p.city || "—"}</td>
+                        <td className="px-5 py-3 text-muted-foreground tabular-nums">
+                          {p.price != null ? Number(p.price).toLocaleString("ar-DZ") : "—"}
+                        </td>
+                        <td className="px-5 py-3">
+                          <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-md ${st.cls}`}>{st.label}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
