@@ -197,24 +197,24 @@ function ContractsPage() {
   return (
     <div className="min-h-screen bg-background" dir="rtl">
       <header className="sticky top-0 z-10 bg-background/85 backdrop-blur border-b border-border">
-        <div className="max-w-5xl mx-auto flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gold flex items-center justify-center">
+        <div className="max-w-5xl mx-auto flex items-center justify-between px-4 sm:px-6 py-4 gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-gold flex items-center justify-center shrink-0">
               <FileText className="w-5 h-5 text-gold-foreground" />
             </div>
-            <div>
-              <div className="font-bold text-navy">العقود</div>
-              <div className="text-xs text-muted-foreground">{organization.name}</div>
+            <div className="min-w-0">
+              <div className="font-bold text-navy truncate">العقود</div>
+              <div className="text-xs text-muted-foreground truncate">{organization.name}</div>
             </div>
           </div>
-          <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-navy">
-            العودة للوحة التحكم
+          <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-navy shrink-0">
             <ArrowRight className="w-4 h-4" />
+            <span className="hidden sm:inline">العودة للوحة التحكم</span>
           </Link>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto p-6 space-y-6">
+      <main className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">{contracts.length} عقد</div>
           <button
@@ -250,35 +250,37 @@ function ContractsPage() {
               <p className="mt-2 text-sm text-muted-foreground">اضغط "عقد جديد" لإنشاء أول عقد لمكتبك.</p>
             </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs text-muted-foreground bg-muted/40">
-                  <th className="text-right font-medium px-5 py-3">العقد</th>
-                  <th className="text-right font-medium px-5 py-3">النوع</th>
-                  <th className="text-right font-medium px-5 py-3">الحالة</th>
-                  <th className="text-right font-medium px-5 py-3">التاريخ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {contracts.map((c) => {
-                  const st = STATUS_LABELS[c.status] ?? STATUS_LABELS.draft;
-                  return (
-                    <tr key={c.id} className="border-t border-border hover:bg-muted/30">
-                      <td className="px-5 py-3 font-medium">
-                        <Link to="/contracts/$contractId" params={{ contractId: c.id }} className="hover:underline">
-                          {c.title}
-                        </Link>
-                      </td>
-                      <td className="px-5 py-3 text-muted-foreground">{TYPE_LABELS[c.contract_type] ?? c.contract_type}</td>
-                      <td className="px-5 py-3">
-                        <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-md ${st.cls}`}>{st.label}</span>
-                      </td>
-                      <td className="px-5 py-3 text-muted-foreground tabular-nums">{c.contract_date}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[520px]">
+                <thead>
+                  <tr className="text-xs text-muted-foreground bg-muted/40">
+                    <th className="text-right font-medium px-5 py-3">العقد</th>
+                    <th className="text-right font-medium px-5 py-3">النوع</th>
+                    <th className="text-right font-medium px-5 py-3">الحالة</th>
+                    <th className="text-right font-medium px-5 py-3">التاريخ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {contracts.map((c) => {
+                    const st = STATUS_LABELS[c.status] ?? STATUS_LABELS.draft;
+                    return (
+                      <tr key={c.id} className="border-t border-border hover:bg-muted/30">
+                        <td className="px-5 py-3 font-medium">
+                          <Link to="/contracts/$contractId" params={{ contractId: c.id }} className="hover:underline">
+                            {c.title}
+                          </Link>
+                        </td>
+                        <td className="px-5 py-3 text-muted-foreground">{TYPE_LABELS[c.contract_type] ?? c.contract_type}</td>
+                        <td className="px-5 py-3">
+                          <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-md ${st.cls}`}>{st.label}</span>
+                        </td>
+                        <td className="px-5 py-3 text-muted-foreground tabular-nums">{c.contract_date}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </main>
