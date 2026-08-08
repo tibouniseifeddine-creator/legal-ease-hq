@@ -75,35 +75,37 @@ function ClientsPage() {
               <p className="mt-2 text-sm text-muted-foreground">اضغط "عميل جديد" لإضافة أول عميل لمكتبك.</p>
             </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs text-muted-foreground bg-muted/40">
-                  <th className="text-right font-medium px-5 py-3">الاسم</th>
-                  <th className="text-right font-medium px-5 py-3">النوع</th>
-                  <th className="text-right font-medium px-5 py-3">الهاتف</th>
-                  <th className="text-right font-medium px-5 py-3">البريد الإلكتروني</th>
-                </tr>
-              </thead>
-              <tbody>
-                {clients.map((c) => (
-                  <tr key={c.id} className="border-t border-border">
-                   <td className="px-5 py-3">
-                      <Link to="/clients/$clientId" params={{ clientId: c.id }} className="flex items-center gap-3 hover:underline">
-                        <div className="w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center text-xs font-bold shrink-0">
-                          {c.full_name.trim().charAt(0) || "؟"}
-                        </div>
-                        <span className="font-medium">{c.full_name}</span>
-                      </Link>
-                    </td>
-                    <td className="px-5 py-3 text-muted-foreground">
-                      {c.client_type === "company" ? "شركة" : "فرد"}
-                    </td>
-                    <td className="px-5 py-3 text-muted-foreground tabular-nums">{c.phone || "—"}</td>
-                    <td className="px-5 py-3 text-muted-foreground">{c.email || "—"}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[560px]">
+                <thead>
+                  <tr className="text-xs text-muted-foreground bg-muted/40">
+                    <th className="text-right font-medium px-5 py-3">الاسم</th>
+                    <th className="text-right font-medium px-5 py-3">النوع</th>
+                    <th className="text-right font-medium px-5 py-3">الهاتف</th>
+                    <th className="text-right font-medium px-5 py-3">البريد الإلكتروني</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {clients.map((c) => (
+                    <tr key={c.id} className="border-t border-border">
+                     <td className="px-5 py-3">
+                        <Link to="/clients/$clientId" params={{ clientId: c.id }} className="flex items-center gap-3 hover:underline">
+                          <div className="w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                            {c.full_name.trim().charAt(0) || "؟"}
+                          </div>
+                          <span className="font-medium">{c.full_name}</span>
+                        </Link>
+                      </td>
+                      <td className="px-5 py-3 text-muted-foreground">
+                        {c.client_type === "company" ? "شركة" : "فرد"}
+                      </td>
+                      <td className="px-5 py-3 text-muted-foreground tabular-nums">{c.phone || "—"}</td>
+                      <td className="px-5 py-3 text-muted-foreground">{c.email || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
@@ -209,4 +211,3 @@ function NewClientForm({
     </form>
   );
 }
-
