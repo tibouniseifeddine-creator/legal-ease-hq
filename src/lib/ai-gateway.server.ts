@@ -17,3 +17,18 @@ export function createLovableAiGatewayProvider(apiKey: string, options: GatewayO
       : {}),
   });
 }
+
+/**
+ * موفر OpenAI مباشر — مستقل تمامًا عن رصيد Lovable، يُستخدم داخل handlers فقط.
+ * يتطلب OPENAI_API_KEY كمتغير بيئة سري.
+ */
+export function createOpenAIDirectProvider(apiKey: string, options: GatewayOptions = {}) {
+  return createOpenAICompatible({
+    name: "openai-direct",
+    baseURL: "https://api.openai.com/v1",
+    apiKey,
+    ...(options.structuredOutputs !== undefined
+      ? { supportsStructuredOutputs: options.structuredOutputs }
+      : {}),
+  });
+}
