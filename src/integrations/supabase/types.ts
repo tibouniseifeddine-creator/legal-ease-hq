@@ -108,6 +108,7 @@ export type Database = {
           content: string | null
           contract_date: string
           contract_type: string
+          country: string
           created_at: string
           created_by: string | null
           end_date: string | null
@@ -133,6 +134,7 @@ export type Database = {
           content?: string | null
           contract_date?: string
           contract_type?: string
+          country?: string
           created_at?: string
           created_by?: string | null
           end_date?: string | null
@@ -158,6 +160,7 @@ export type Database = {
           content?: string | null
           contract_date?: string
           contract_type?: string
+          country?: string
           created_at?: string
           created_by?: string | null
           end_date?: string | null

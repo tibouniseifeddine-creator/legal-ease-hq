@@ -42,7 +42,7 @@ function clientsListQueryOptions(organizationId: string) {
   };
 }
 
-export const Route = createFileRoute("/tasks")({
+export const Route = createFileRoute("/tasks/")({
   beforeLoad: requireOrgSession,
   loader: async ({ context }) => {
     await Promise.all([
