@@ -25,7 +25,7 @@ function clientsQueryOptions(organizationId: string) {
   };
 }
 
-export const Route = createFileRoute("/clients")({
+export const Route = createFileRoute("/clients/")({
   beforeLoad: requireOrgSession,
   loader: async ({ context }) => {
     await context.queryClient.ensureQueryData(clientsQueryOptions(context.organization.id));

@@ -40,7 +40,7 @@ function propertiesQueryOptions(organizationId: string) {
   };
 }
 
-export const Route = createFileRoute("/properties")({
+export const Route = createFileRoute("/properties/")({
   beforeLoad: requireOrgSession,
   loader: async ({ context }) => {
     await context.queryClient.ensureQueryData(propertiesQueryOptions(context.organization.id));

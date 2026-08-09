@@ -87,7 +87,7 @@ function propertiesListQueryOptions(organizationId: string) {
   };
 }
 
-export const Route = createFileRoute("/contracts")({
+export const Route = createFileRoute("/contracts/")({
   beforeLoad: requireOrgSession,
   loader: async ({ context }) => {
     await Promise.all([
