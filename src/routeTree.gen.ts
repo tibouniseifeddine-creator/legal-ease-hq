@@ -25,7 +25,10 @@ import { Route as ContractReviewRouteImport } from './routes/contract-review'
 import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as AssistantRouteImport } from './routes/assistant'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TasksTaskIdRouteImport } from './routes/tasks.$taskId'
+import { Route as PropertiesPropertyIdRouteImport } from './routes/properties.$propertyId'
 import { Route as JoinCodeRouteImport } from './routes/join.$code'
+import { Route as InvoicesInvoiceIdRouteImport } from './routes/invoices.$invoiceId'
 import { Route as ContractsContractIdRouteImport } from './routes/contracts.$contractId'
 import { Route as ClientsClientIdRouteImport } from './routes/clients.$clientId'
 
@@ -109,10 +112,25 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TasksTaskIdRoute = TasksTaskIdRouteImport.update({
+  id: '/$taskId',
+  path: '/$taskId',
+  getParentRoute: () => TasksRoute,
+} as any)
+const PropertiesPropertyIdRoute = PropertiesPropertyIdRouteImport.update({
+  id: '/$propertyId',
+  path: '/$propertyId',
+  getParentRoute: () => PropertiesRoute,
+} as any)
 const JoinCodeRoute = JoinCodeRouteImport.update({
   id: '/join/$code',
   path: '/join/$code',
   getParentRoute: () => rootRouteImport,
+} as any)
+const InvoicesInvoiceIdRoute = InvoicesInvoiceIdRouteImport.update({
+  id: '/$invoiceId',
+  path: '/$invoiceId',
+  getParentRoute: () => InvoicesRoute,
 } as any)
 const ContractsContractIdRoute = ContractsContractIdRouteImport.update({
   id: '/$contractId',
@@ -132,19 +150,22 @@ export interface FileRoutesByFullPath {
   '/contract-review': typeof ContractReviewRoute
   '/contracts': typeof ContractsRouteWithChildren
   '/documents': typeof DocumentsRoute
-  '/invoices': typeof InvoicesRoute
+  '/invoices': typeof InvoicesRouteWithChildren
   '/job-logs': typeof JobLogsRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
-  '/properties': typeof PropertiesRoute
+  '/properties': typeof PropertiesRouteWithChildren
   '/reports': typeof ReportsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
-  '/tasks': typeof TasksRoute
+  '/tasks': typeof TasksRouteWithChildren
   '/terms': typeof TermsRoute
   '/clients/$clientId': typeof ClientsClientIdRoute
   '/contracts/$contractId': typeof ContractsContractIdRoute
+  '/invoices/$invoiceId': typeof InvoicesInvoiceIdRoute
   '/join/$code': typeof JoinCodeRoute
+  '/properties/$propertyId': typeof PropertiesPropertyIdRoute
+  '/tasks/$taskId': typeof TasksTaskIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -153,19 +174,22 @@ export interface FileRoutesByTo {
   '/contract-review': typeof ContractReviewRoute
   '/contracts': typeof ContractsRouteWithChildren
   '/documents': typeof DocumentsRoute
-  '/invoices': typeof InvoicesRoute
+  '/invoices': typeof InvoicesRouteWithChildren
   '/job-logs': typeof JobLogsRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
-  '/properties': typeof PropertiesRoute
+  '/properties': typeof PropertiesRouteWithChildren
   '/reports': typeof ReportsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
-  '/tasks': typeof TasksRoute
+  '/tasks': typeof TasksRouteWithChildren
   '/terms': typeof TermsRoute
   '/clients/$clientId': typeof ClientsClientIdRoute
   '/contracts/$contractId': typeof ContractsContractIdRoute
+  '/invoices/$invoiceId': typeof InvoicesInvoiceIdRoute
   '/join/$code': typeof JoinCodeRoute
+  '/properties/$propertyId': typeof PropertiesPropertyIdRoute
+  '/tasks/$taskId': typeof TasksTaskIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -175,19 +199,22 @@ export interface FileRoutesById {
   '/contract-review': typeof ContractReviewRoute
   '/contracts': typeof ContractsRouteWithChildren
   '/documents': typeof DocumentsRoute
-  '/invoices': typeof InvoicesRoute
+  '/invoices': typeof InvoicesRouteWithChildren
   '/job-logs': typeof JobLogsRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
-  '/properties': typeof PropertiesRoute
+  '/properties': typeof PropertiesRouteWithChildren
   '/reports': typeof ReportsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
-  '/tasks': typeof TasksRoute
+  '/tasks': typeof TasksRouteWithChildren
   '/terms': typeof TermsRoute
   '/clients/$clientId': typeof ClientsClientIdRoute
   '/contracts/$contractId': typeof ContractsContractIdRoute
+  '/invoices/$invoiceId': typeof InvoicesInvoiceIdRoute
   '/join/$code': typeof JoinCodeRoute
+  '/properties/$propertyId': typeof PropertiesPropertyIdRoute
+  '/tasks/$taskId': typeof TasksTaskIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -210,7 +237,10 @@ export interface FileRouteTypes {
     | '/terms'
     | '/clients/$clientId'
     | '/contracts/$contractId'
+    | '/invoices/$invoiceId'
     | '/join/$code'
+    | '/properties/$propertyId'
+    | '/tasks/$taskId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -231,7 +261,10 @@ export interface FileRouteTypes {
     | '/terms'
     | '/clients/$clientId'
     | '/contracts/$contractId'
+    | '/invoices/$invoiceId'
     | '/join/$code'
+    | '/properties/$propertyId'
+    | '/tasks/$taskId'
   id:
     | '__root__'
     | '/'
@@ -252,7 +285,10 @@ export interface FileRouteTypes {
     | '/terms'
     | '/clients/$clientId'
     | '/contracts/$contractId'
+    | '/invoices/$invoiceId'
     | '/join/$code'
+    | '/properties/$propertyId'
+    | '/tasks/$taskId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -262,15 +298,15 @@ export interface RootRouteChildren {
   ContractReviewRoute: typeof ContractReviewRoute
   ContractsRoute: typeof ContractsRouteWithChildren
   DocumentsRoute: typeof DocumentsRoute
-  InvoicesRoute: typeof InvoicesRoute
+  InvoicesRoute: typeof InvoicesRouteWithChildren
   JobLogsRoute: typeof JobLogsRoute
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
-  PropertiesRoute: typeof PropertiesRoute
+  PropertiesRoute: typeof PropertiesRouteWithChildren
   ReportsRoute: typeof ReportsRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SettingsRoute: typeof SettingsRoute
-  TasksRoute: typeof TasksRoute
+  TasksRoute: typeof TasksRouteWithChildren
   TermsRoute: typeof TermsRoute
   JoinCodeRoute: typeof JoinCodeRoute
 }
@@ -389,12 +425,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tasks/$taskId': {
+      id: '/tasks/$taskId'
+      path: '/$taskId'
+      fullPath: '/tasks/$taskId'
+      preLoaderRoute: typeof TasksTaskIdRouteImport
+      parentRoute: typeof TasksRoute
+    }
+    '/properties/$propertyId': {
+      id: '/properties/$propertyId'
+      path: '/$propertyId'
+      fullPath: '/properties/$propertyId'
+      preLoaderRoute: typeof PropertiesPropertyIdRouteImport
+      parentRoute: typeof PropertiesRoute
+    }
     '/join/$code': {
       id: '/join/$code'
       path: '/join/$code'
       fullPath: '/join/$code'
       preLoaderRoute: typeof JoinCodeRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/invoices/$invoiceId': {
+      id: '/invoices/$invoiceId'
+      path: '/$invoiceId'
+      fullPath: '/invoices/$invoiceId'
+      preLoaderRoute: typeof InvoicesInvoiceIdRouteImport
+      parentRoute: typeof InvoicesRoute
     }
     '/contracts/$contractId': {
       id: '/contracts/$contractId'
@@ -436,6 +493,40 @@ const ContractsRouteWithChildren = ContractsRoute._addFileChildren(
   ContractsRouteChildren,
 )
 
+interface InvoicesRouteChildren {
+  InvoicesInvoiceIdRoute: typeof InvoicesInvoiceIdRoute
+}
+
+const InvoicesRouteChildren: InvoicesRouteChildren = {
+  InvoicesInvoiceIdRoute: InvoicesInvoiceIdRoute,
+}
+
+const InvoicesRouteWithChildren = InvoicesRoute._addFileChildren(
+  InvoicesRouteChildren,
+)
+
+interface PropertiesRouteChildren {
+  PropertiesPropertyIdRoute: typeof PropertiesPropertyIdRoute
+}
+
+const PropertiesRouteChildren: PropertiesRouteChildren = {
+  PropertiesPropertyIdRoute: PropertiesPropertyIdRoute,
+}
+
+const PropertiesRouteWithChildren = PropertiesRoute._addFileChildren(
+  PropertiesRouteChildren,
+)
+
+interface TasksRouteChildren {
+  TasksTaskIdRoute: typeof TasksTaskIdRoute
+}
+
+const TasksRouteChildren: TasksRouteChildren = {
+  TasksTaskIdRoute: TasksTaskIdRoute,
+}
+
+const TasksRouteWithChildren = TasksRoute._addFileChildren(TasksRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AssistantRoute: AssistantRoute,
@@ -443,15 +534,15 @@ const rootRouteChildren: RootRouteChildren = {
   ContractReviewRoute: ContractReviewRoute,
   ContractsRoute: ContractsRouteWithChildren,
   DocumentsRoute: DocumentsRoute,
-  InvoicesRoute: InvoicesRoute,
+  InvoicesRoute: InvoicesRouteWithChildren,
   JobLogsRoute: JobLogsRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
-  PropertiesRoute: PropertiesRoute,
+  PropertiesRoute: PropertiesRouteWithChildren,
   ReportsRoute: ReportsRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SettingsRoute: SettingsRoute,
-  TasksRoute: TasksRoute,
+  TasksRoute: TasksRouteWithChildren,
   TermsRoute: TermsRoute,
   JoinCodeRoute: JoinCodeRoute,
 }
