@@ -134,29 +134,40 @@ function TasksPage() {
                 const client = clients.find((c) => c.id === t.client_id);
                 const due = formatDueAt(t.due_at);
                 return (
-                  <li key={t.id} className="p-4 flex items-center gap-3">
-                    {t.task_type === "task" ? (
-                      <input
-                        type="checkbox"
-                        checked={t.is_done}
-                        onChange={() => toggleDone(t)}
-                        className="accent-[color:var(--gold)] w-4 h-4 shrink-0"
-                      />
-                    ) : (
-                      <span className="w-2 h-2 rounded-full bg-sky-500 shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className={`text-sm font-medium ${t.is_done ? "line-through text-muted-foreground" : ""}`}>
-                        {t.title}
+                  <li key={t.id}>
+                    <Link
+                      to="/tasks/$taskId"
+                      params={{ taskId: t.id }}
+                      className="p-4 flex items-center gap-3 hover:bg-muted/40 transition"
+                    >
+                      {t.task_type === "task" ? (
+                        <input
+                          type="checkbox"
+                          checked={t.is_done}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            toggleDone(t);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="accent-[color:var(--gold)] w-4 h-4 shrink-0"
+                        />
+                      ) : (
+                        <span className="w-2 h-2 rounded-full bg-sky-500 shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className={`text-sm font-medium ${t.is_done ? "line-through text-muted-foreground" : ""}`}>
+                          {t.title}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
+                          {due && <span className="tabular-nums">{due}</span>}
+                          {client && <span>· {client.full_name}</span>}
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
-                        {due && <span className="tabular-nums">{due}</span>}
-                        {client && <span>· {client.full_name}</span>}
-                      </div>
-                    </div>
-                    <span className="text-[11px] font-semibold px-2 py-1 rounded-md bg-muted text-muted-foreground shrink-0">
-                      {t.task_type === "task" ? "مهمة" : "موعد"}
-                    </span>
+                      <span className="text-[11px] font-semibold px-2 py-1 rounded-md bg-muted text-muted-foreground shrink-0">
+                        {t.task_type === "task" ? "مهمة" : "موعد"}
+                      </span>
+                    </Link>
                   </li>
                 );
               })}
