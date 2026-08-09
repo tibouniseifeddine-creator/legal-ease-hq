@@ -80,7 +80,7 @@ function myRoleQueryOptions(organizationId: string, userId: string) {
   };
 }
 
-export const Route = createFileRoute("/invoices")({
+export const Route = createFileRoute("/invoices/$invoiceId")({
   beforeLoad: requireOrgSession,
   loader: async ({ context }) => {
     await Promise.all([
