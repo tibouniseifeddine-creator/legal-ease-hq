@@ -198,6 +198,7 @@ function InvoicesPage() {
                           {canManage ? (
                             <select
                               value={inv.status}
+                              onClick={(e) => e.stopPropagation()}
                               onChange={(e) => setStatus(inv, e.target.value)}
                               className={`text-[11px] font-semibold px-2 py-1 rounded-md border-0 focus:outline-none focus:ring-1 focus:ring-gold ${st.cls}`}
                             >
@@ -280,8 +281,8 @@ function NewInvoiceForm({
         <div>
           <label className="text-sm font-semibold text-navy">العميل (اختياري)</label>
           <select
-            value={contractId}
-            onChange={(e) => setContractId(e.target.value)}
+            value={clientId}
+            onChange={(e) => setClientId(e.target.value)}
             className="mt-2 w-full h-11 rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none px-4 text-sm"
           >
             <option value="">— بدون —</option>
@@ -293,9 +294,8 @@ function NewInvoiceForm({
         <div>
           <label className="text-sm font-semibold text-navy">العقد (اختياري)</label>
           <select
-                              value={inv.status}
-                              onClick={(e) => e.stopPropagation()}
-                              onChange={(e) => setStatus(inv, e.target.value)}
+            value={contractId}
+            onChange={(e) => setContractId(e.target.value)}
             className="mt-2 w-full h-11 rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none px-4 text-sm"
           >
             <option value="">— بدون —</option>
