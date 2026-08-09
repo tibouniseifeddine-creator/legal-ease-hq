@@ -113,14 +113,14 @@ const ClientsIndexRoute = ClientsIndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const TasksTaskIdRoute = TasksTaskIdRouteImport.update({
-  id: '/$taskId',
-  path: '/$taskId',
-  getParentRoute: () => TasksRoute,
+  id: '/tasks/$taskId',
+  path: '/tasks/$taskId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const PropertiesPropertyIdRoute = PropertiesPropertyIdRouteImport.update({
-  id: '/$propertyId',
-  path: '/$propertyId',
-  getParentRoute: () => PropertiesRoute,
+  id: '/properties/$propertyId',
+  path: '/properties/$propertyId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const JoinCodeRoute = JoinCodeRouteImport.update({
   id: '/join/$code',
@@ -128,19 +128,19 @@ const JoinCodeRoute = JoinCodeRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const InvoicesInvoiceIdRoute = InvoicesInvoiceIdRouteImport.update({
-  id: '/$invoiceId',
-  path: '/$invoiceId',
-  getParentRoute: () => InvoicesRoute,
+  id: '/invoices/$invoiceId',
+  path: '/invoices/$invoiceId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ContractsContractIdRoute = ContractsContractIdRouteImport.update({
-  id: '/$contractId',
-  path: '/$contractId',
-  getParentRoute: () => ContractsRoute,
+  id: '/contracts/$contractId',
+  path: '/contracts/$contractId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ClientsClientIdRoute = ClientsClientIdRouteImport.update({
-  id: '/$clientId',
-  path: '/$clientId',
-  getParentRoute: () => ClientsRoute,
+  id: '/clients/$clientId',
+  path: '/clients/$clientId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -303,7 +303,12 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SettingsRoute: typeof SettingsRoute
   TermsRoute: typeof TermsRoute
+  ClientsClientIdRoute: typeof ClientsClientIdRoute
+  ContractsContractIdRoute: typeof ContractsContractIdRoute
+  InvoicesInvoiceIdRoute: typeof InvoicesInvoiceIdRoute
   JoinCodeRoute: typeof JoinCodeRoute
+  PropertiesPropertyIdRoute: typeof PropertiesPropertyIdRoute
+  TasksTaskIdRoute: typeof TasksTaskIdRoute
   ClientsIndexRoute: typeof ClientsIndexRoute
   ContractsIndexRoute: typeof ContractsIndexRoute
   InvoicesIndexRoute: typeof InvoicesIndexRoute
@@ -427,17 +432,17 @@ declare module '@tanstack/react-router' {
     }
     '/tasks/$taskId': {
       id: '/tasks/$taskId'
-      path: '/$taskId'
+      path: '/tasks/$taskId'
       fullPath: '/tasks/$taskId'
       preLoaderRoute: typeof TasksTaskIdRouteImport
-      parentRoute: typeof TasksRoute
+      parentRoute: typeof rootRouteImport
     }
     '/properties/$propertyId': {
       id: '/properties/$propertyId'
-      path: '/$propertyId'
+      path: '/properties/$propertyId'
       fullPath: '/properties/$propertyId'
       preLoaderRoute: typeof PropertiesPropertyIdRouteImport
-      parentRoute: typeof PropertiesRoute
+      parentRoute: typeof rootRouteImport
     }
     '/join/$code': {
       id: '/join/$code'
@@ -448,24 +453,24 @@ declare module '@tanstack/react-router' {
     }
     '/invoices/$invoiceId': {
       id: '/invoices/$invoiceId'
-      path: '/$invoiceId'
+      path: '/invoices/$invoiceId'
       fullPath: '/invoices/$invoiceId'
       preLoaderRoute: typeof InvoicesInvoiceIdRouteImport
-      parentRoute: typeof InvoicesRoute
+      parentRoute: typeof rootRouteImport
     }
     '/contracts/$contractId': {
       id: '/contracts/$contractId'
-      path: '/$contractId'
+      path: '/contracts/$contractId'
       fullPath: '/contracts/$contractId'
       preLoaderRoute: typeof ContractsContractIdRouteImport
-      parentRoute: typeof ContractsRoute
+      parentRoute: typeof rootRouteImport
     }
     '/clients/$clientId': {
       id: '/clients/$clientId'
-      path: '/$clientId'
+      path: '/clients/$clientId'
       fullPath: '/clients/$clientId'
       preLoaderRoute: typeof ClientsClientIdRouteImport
-      parentRoute: typeof ClientsRoute
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -482,7 +487,12 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SettingsRoute: SettingsRoute,
   TermsRoute: TermsRoute,
+  ClientsClientIdRoute: ClientsClientIdRoute,
+  ContractsContractIdRoute: ContractsContractIdRoute,
+  InvoicesInvoiceIdRoute: InvoicesInvoiceIdRoute,
   JoinCodeRoute: JoinCodeRoute,
+  PropertiesPropertyIdRoute: PropertiesPropertyIdRoute,
+  TasksTaskIdRoute: TasksTaskIdRoute,
   ClientsIndexRoute: ClientsIndexRoute,
   ContractsIndexRoute: ContractsIndexRoute,
   InvoicesIndexRoute: InvoicesIndexRoute,
@@ -492,13 +502,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
