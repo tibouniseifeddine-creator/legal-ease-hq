@@ -48,10 +48,12 @@ export const generateContractDocument = createServerFn({ method: "POST" })
     const { country, contract } = knowledge;
     const context = buildKnowledgeContext(country, contract);
 
-    const missingData = contract.requiredData.filter((_, index) => {
-      const checks = [data.partyA.name, data.partyB.name, data.property.title, String(data.property.price ?? ""), data.contractDate];
-      return !((checks[index] ?? "x").trim());
-    });
+    const missingData: string[] = [];
+    if (!data.partyA.name.trim()) missingData.push("اسم الطرف الأول");
+    if (!data.partyB.name.trim()) missingData.push("اسم الطرف الثاني");
+    if (!data.property.title.trim()) missingData.push("تعيين محل العقد");
+    if (data.property.price === null) missingData.push("المبلغ / الثمن");
+    if (!data.property.address.trim() && !data.property.city.trim()) missingData.push("عنوان محل العقد");
 
     const userData = [
       `تاريخ العقد: ${data.contractDate}`,
@@ -83,7 +85,7 @@ export const generateContractDocument = createServerFn({ method: "POST" })
 ${context}`;
 
     const gateway = createLovableAiGatewayProvider(key);
-    const model = gateway("google/gemini-3-pro-preview");
+    const model = gateway("openai/gpt-5.5");
 
     const { text } = await generateText({
       model,
