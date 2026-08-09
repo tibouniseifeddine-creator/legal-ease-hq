@@ -1,7 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ArrowRight, Plus, FileText, Loader2, X, AlertCircle, Wand2 } from "lucide-react";
+import { ArrowRight, Plus, FileText, Loader2, X, AlertCircle, Wand2, Sparkles, BookOpen } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { generateContractDocument } from "@/lib/contract-generation.functions";
+import { SUPPORTED_COUNTRIES } from "@/lib/legal-knowledge";
 import { supabase } from "@/integrations/supabase/client";
 import { requireOrgSession } from "@/lib/require-org-session";
 import { Field } from "@/components/Field";
@@ -373,6 +376,12 @@ function NewContractForm({
   const today = new Date().toISOString().slice(0, 10);
   const [title, setTitle] = useState("");
   const [contractType, setContractType] = useState("sale");
+  const [country, setCountry] = useState("DZ");
+  const [extraNotes, setExtraNotes] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [genError, setGenError] = useState<string | null>(null);
+  const [genInfo, setGenInfo] = useState<{ sources: string[]; missingData: string[] } | null>(null);
+  const generateDoc = useServerFn(generateContractDocument);
   const [status, setStatus] = useState("draft");
   const [clientId, setClientId] = useState("");
   const [propertyTitle, setPropertyTitle] = useState("");
@@ -423,6 +432,56 @@ function NewContractForm({
   const fillWitnessFromClient = (client: Client | null, setNationalId: (v: string) => void) => {
     if (!client) return;
     setNationalId(client.national_id ?? "");
+  };
+
+  const handleAiGenerate = async () => {
+    setGenerating(true);
+    setGenError(null);
+    setGenInfo(null);
+    try {
+      const res = await generateDoc({
+        data: {
+          country,
+          contractType,
+          title: title.trim() || null,
+          contractDate,
+          endDate: endDate || null,
+          partyA: { name: partyAName.trim(), nationalId: partyANationalId.trim(), phone: partyAPhone.trim() },
+          partyB: { name: partyBName.trim(), nationalId: partyBNationalId.trim(), phone: partyBPhone.trim() },
+          property: {
+            title: propertyTitle.trim(),
+            type: propertyType,
+            city: propertyCity.trim(),
+            address: propertyAddress.trim(),
+            area: propertyArea.trim() ? Number(propertyArea) : null,
+            price: propertyPrice.trim() ? Number(propertyPrice) : null,
+          },
+          witnesses: [
+            { name: witness1Name.trim(), nationalId: witness1NationalId.trim() },
+            { name: witness2Name.trim(), nationalId: witness2NationalId.trim() },
+          ].filter((w) => w.name),
+          extraNotes: extraNotes.trim() || null,
+        },
+      });
+      if (!res.available) {
+        setGenError(res.message);
+        return;
+      }
+      setContent(res.content);
+      setGenInfo({ sources: res.sources, missingData: res.missingData });
+      if (!title.trim() && propertyTitle.trim()) {
+        setTitle(`${TYPE_LABELS[contractType]} — ${propertyTitle.trim()}`);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "تعذر توليد العقد";
+      setGenError(
+        message.includes("429") ? "تم تجاوز الحد المسموح، جرب لاحقًا."
+        : message.includes("402") ? "رصيد الذكاء الاصطناعي غير كافٍ."
+        : message,
+      );
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const handleGenerate = () => {
@@ -509,6 +568,7 @@ function NewContractForm({
       organization_id: organizationId,
       title: title.trim(),
       contract_type: contractType,
+      country,
       status,
       client_id: clientId || null,
       property_id: finalPropertyId,
@@ -555,6 +615,20 @@ function NewContractForm({
           >
             {Object.entries(TYPE_LABELS).map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="text-sm font-semibold text-navy">البلد (المرجع القانوني)</label>
+          <select
+            value={country}
+            onChange={(e) => setCountry(e.target.value)}
+            className="mt-2 w-full h-11 rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none px-4 text-sm"
+          >
+            {SUPPORTED_COUNTRIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.name}{c.available ? "" : " — الحزمة القانونية غير متوفرة"}
+              </option>
             ))}
           </select>
         </div>
@@ -690,15 +764,63 @@ function NewContractForm({
       <div className="pt-2 border-t border-border">
         <div className="flex items-center justify-between mb-2">
           <label className="text-sm font-semibold text-navy">نص العقد</label>
-          <button
-            type="button"
-            onClick={handleGenerate}
-            className="inline-flex items-center gap-1.5 text-xs text-sky-600 font-semibold hover:underline"
-          >
-            <Wand2 className="w-3.5 h-3.5" />
-            توليد النص تلقائيًا
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleGenerate}
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-semibold hover:underline"
+            >
+              <Wand2 className="w-3.5 h-3.5" />
+              نموذج سريع
+            </button>
+            <button
+              type="button"
+              onClick={handleAiGenerate}
+              disabled={generating}
+              className="inline-flex items-center gap-1.5 text-xs bg-navy text-navy-foreground rounded-lg px-3 py-1.5 font-bold disabled:opacity-50"
+            >
+              {generating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 text-gold" />}
+              {generating ? "جاري تحرير العقد..." : "توليد عقد كامل"}
+            </button>
+          </div>
         </div>
+
+        <div className="mb-3">
+          <label className="text-xs font-semibold text-muted-foreground">تفاصيل إضافية للتوليد (اختياري)</label>
+          <textarea
+            value={extraNotes}
+            onChange={(e) => setExtraNotes(e.target.value)}
+            rows={2}
+            placeholder="مثال: الدفع على ثلاثة أقساط، التسليم بعد شهرين، وجود رهن سابق..."
+            className="mt-2 w-full rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none p-3 text-sm resize-y"
+          />
+        </div>
+
+        {genError && (
+          <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 p-3 text-sm mb-3">
+            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+            <span>{genError}</span>
+          </div>
+        )}
+
+        {genInfo && (
+          <div className="rounded-xl bg-muted/50 border border-border p-3 text-xs mb-3 space-y-2">
+            <div className="flex items-center gap-1.5 font-bold text-navy">
+              <BookOpen className="w-3.5 h-3.5 text-gold" />
+              المراجع القانونية المستعملة
+            </div>
+            <ul className="space-y-1 text-muted-foreground">
+              {genInfo.sources.map((src) => (
+                <li key={src}>• {src}</li>
+              ))}
+            </ul>
+            {genInfo.missingData.length > 0 && (
+              <div className="text-amber-700">
+                بيانات ناقصة تركها العقد كحقول فارغة: {genInfo.missingData.join("، ")}
+              </div>
+            )}
+          </div>
+        )}
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
