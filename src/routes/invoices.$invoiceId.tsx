@@ -1,12 +1,12 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ArrowRight, Receipt, Pencil, Trash2, Loader2, AlertCircle, X } from "lucide-react";
+import { ArrowRight, Plus, Receipt, Loader2, X, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { requireOrgSession } from "@/lib/require-org-session";
 import { AppShell } from "@/components/AppShell";
 import { Field } from "@/components/Field";
-import type { Tables, TablesUpdate } from "@/integrations/supabase/types";
+import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 
 type Invoice = Tables<"invoices">;
 type Client = Tables<"clients">;
@@ -19,13 +19,17 @@ const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
   cancelled: { label: "ملغاة", cls: "bg-muted text-muted-foreground" },
 };
 
-function invoiceDetailQueryOptions(invoiceId: string) {
+function invoicesQueryOptions(organizationId: string) {
   return {
-    queryKey: ["invoice-detail", invoiceId],
+    queryKey: ["invoices", organizationId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("invoices").select("*").eq("id", invoiceId).single();
+      const { data, error } = await supabase
+        .from("invoices")
+        .select("*")
+        .eq("organization_id", organizationId)
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as Invoice;
+      return (data ?? []) as Invoice[];
     },
   };
 }
@@ -76,176 +80,167 @@ function myRoleQueryOptions(organizationId: string, userId: string) {
   };
 }
 
-export const Route = createFileRoute("/invoices/$invoiceId")({
+export const Route = createFileRoute("/invoices")({
   beforeLoad: requireOrgSession,
-  loader: async ({ context, params }) => {
+  loader: async ({ context }) => {
     await Promise.all([
-      context.queryClient.ensureQueryData(invoiceDetailQueryOptions(params.invoiceId)),
+      context.queryClient.ensureQueryData(invoicesQueryOptions(context.organization.id)),
       context.queryClient.ensureQueryData(clientsListQueryOptions(context.organization.id)),
       context.queryClient.ensureQueryData(contractsListQueryOptions(context.organization.id)),
       context.queryClient.ensureQueryData(myRoleQueryOptions(context.organization.id, context.user.id)),
     ]);
   },
   head: () => ({
-    meta: [{ title: "تفاصيل الفاتورة — NexLaw" }],
+    meta: [{ title: "الفواتير — NexLaw" }],
   }),
-  component: InvoiceDetailPage,
+  component: InvoicesPage,
 });
 
-function InvoiceDetailPage() {
+function InvoicesPage() {
   const { user, organization } = Route.useRouteContext();
-  const { invoiceId } = Route.useParams();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { data: invoice } = useSuspenseQuery(invoiceDetailQueryOptions(invoiceId));
+  const { data: invoices } = useSuspenseQuery(invoicesQueryOptions(organization.id));
   const { data: clients } = useSuspenseQuery(clientsListQueryOptions(organization.id));
   const { data: contracts } = useSuspenseQuery(contractsListQueryOptions(organization.id));
   const { data: role } = useSuspenseQuery(myRoleQueryOptions(organization.id, user.id));
   const canManage = role === "owner" || role === "admin";
-  const client = clients.find((c) => c.id === invoice.client_id);
-  const contract = contracts.find((c) => c.id === invoice.contract_id);
+  const [showForm, setShowForm] = useState(false);
 
-  const [editing, setEditing] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["invoices", organization.id] });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["invoice-detail", invoiceId] });
-
-  const handleDelete = async () => {
-    setDeleting(true);
-    setDeleteError(null);
-    const { error } = await supabase.from("invoices").delete().eq("id", invoiceId);
-    setDeleting(false);
-    if (error) {
-      setDeleteError(error.message);
-      return;
-    }
-    navigate({ to: "/invoices" });
+  const setStatus = async (invoice: Invoice, status: string) => {
+    await supabase
+      .from("invoices")
+      .update({ status, paid_at: status === "paid" ? new Date().toISOString() : null })
+      .eq("id", invoice.id);
+    invalidate();
   };
 
-  const st = STATUS_LABELS[invoice.status] ?? STATUS_LABELS.unpaid;
+  const total = invoices.reduce((sum, i) => sum + Number(i.amount), 0);
+  const unpaidTotal = invoices.filter((i) => i.status === "unpaid" || i.status === "overdue").reduce((sum, i) => sum + Number(i.amount), 0);
 
   return (
-    <AppShell user={user} organization={organization} title={invoice.title} subtitle={organization.name}>
-      <div className="max-w-3xl mx-auto space-y-6">
+    <AppShell user={user} organization={organization} title="الفواتير" subtitle="الفواتير والملخص المالي">
+
+      <div className="max-w-5xl mx-auto space-y-6">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-card rounded-2xl border border-border p-5">
+            <div className="text-sm text-muted-foreground">إجمالي الفواتير</div>
+            <div className="text-2xl font-extrabold mt-1 text-navy tabular-nums">{total.toLocaleString("ar-DZ")} دج</div>
+          </div>
+          <div className="bg-card rounded-2xl border border-border p-5">
+            <div className="text-sm text-muted-foreground">غير محصّل</div>
+            <div className="text-2xl font-extrabold mt-1 text-red-600 tabular-nums">{unpaidTotal.toLocaleString("ar-DZ")} دج</div>
+          </div>
+        </div>
+
         <div className="flex items-center justify-between">
-          <Link to="/invoices" className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-navy">
-            <ArrowRight className="w-4 h-4" />
-            العودة لكل الفواتير
-          </Link>
+          <div className="text-sm text-muted-foreground">
+            {invoices.length} فاتورة
+            {!canManage && <span className="mr-2">— عرض فقط</span>}
+          </div>
           {canManage && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setEditing((v) => !v)}
-                className="inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-lg bg-muted hover:bg-accent"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-                {editing ? "إلغاء التعديل" : "تعديل"}
-              </button>
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                حذف
-              </button>
-            </div>
+            <button
+              onClick={() => setShowForm((v) => !v)}
+              className="inline-flex items-center gap-2 bg-gold text-gold-foreground rounded-xl px-4 py-2.5 text-sm font-bold hover:brightness-95 transition"
+            >
+              {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              {showForm ? "إلغاء" : "فاتورة جديدة"}
+            </button>
           )}
         </div>
 
-        {editing && canManage ? (
-          <EditInvoiceForm
-            invoice={invoice}
+        {canManage && showForm && (
+          <NewInvoiceForm
+            organizationId={organization.id}
             clients={clients}
             contracts={contracts}
-            onDone={() => setEditing(false)}
-            onSaved={() => {
-              invalidate();
-              setEditing(false);
-            }}
+            onDone={() => setShowForm(false)}
+            onCreated={invalidate}
           />
-        ) : (
-          <section className="bg-card rounded-2xl border border-border p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
-                <Receipt className="w-6 h-6" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h1 className="font-bold text-navy text-lg truncate">{invoice.title}</h1>
-                <div className="text-xs text-muted-foreground tabular-nums">{Number(invoice.amount).toLocaleString("ar-DZ")} دج</div>
-              </div>
-              <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-md shrink-0 ${st.cls}`}>{st.label}</span>
-            </div>
-            <div className="grid sm:grid-cols-2 gap-3 text-sm">
-              <div><span className="text-muted-foreground">تاريخ الاستحقاق: </span>{invoice.due_date || "—"}</div>
-              <div><span className="text-muted-foreground">العميل: </span>{client?.full_name || "—"}</div>
-              <div><span className="text-muted-foreground">العقد المرتبط: </span>{contract?.title || "—"}</div>
-              <div><span className="text-muted-foreground">تاريخ الدفع: </span>{invoice.paid_at ? new Date(invoice.paid_at).toLocaleDateString("ar-DZ") : "—"}</div>
-            </div>
-          </section>
         )}
-      </div>
 
-      {showDeleteConfirm && (
-        <div
-          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
-          onClick={() => !deleting && setShowDeleteConfirm(false)}
-        >
-          <div className="bg-card rounded-2xl border border-border p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-bold text-navy mb-2">حذف الفاتورة</h3>
-            <p className="text-sm text-muted-foreground mb-3">
-              هل أنت متأكد أنك تريد حذف "{invoice.title}"؟ هذا الإجراء لا يمكن التراجع عنه.
-            </p>
-            {deleteError && (
-              <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-200 text-red-700 p-3 text-sm mb-3">
-                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                <span>{deleteError}</span>
+        <div className="bg-card rounded-2xl border border-border overflow-hidden">
+          {invoices.length === 0 ? (
+            <div className="p-10 text-center">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-50 flex items-center justify-center">
+                <Receipt className="w-7 h-7 text-gold" />
               </div>
-            )}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="flex-1 inline-flex items-center justify-center gap-2 bg-red-600 text-white rounded-xl h-11 font-bold hover:brightness-95 transition disabled:opacity-50"
-              >
-                {deleting && <Loader2 className="w-4 h-4 animate-spin" />}
-                {deleting ? "جاري الحذف..." : "حذف نهائيًا"}
-              </button>
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                disabled={deleting}
-                className="flex-1 bg-muted rounded-xl h-11 font-bold hover:bg-accent transition disabled:opacity-50"
-              >
-                إلغاء
-              </button>
+              <h2 className="mt-4 font-bold text-navy text-lg">لا يوجد فواتير بعد</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {canManage ? 'اضغط "فاتورة جديدة" لإنشاء أول فاتورة لمكتبك.' : "لا توجد فواتير مسجَّلة حاليًا."}
+              </p>
             </div>
-          </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[480px]">
+                <thead>
+                  <tr className="text-xs text-muted-foreground bg-muted/40">
+                    <th className="text-right font-medium px-5 py-3">الفاتورة</th>
+                    <th className="text-right font-medium px-5 py-3">المبلغ</th>
+                    <th className="text-right font-medium px-5 py-3">الاستحقاق</th>
+                    <th className="text-right font-medium px-5 py-3">الحالة</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoices.map((inv) => {
+                    const st = STATUS_LABELS[inv.status] ?? STATUS_LABELS.unpaid;
+                    return (
+                      <tr key={inv.id} className="border-t border-border hover:bg-muted/30">
+                        <td className="px-5 py-3 font-medium">
+                          <Link to="/invoices/$invoiceId" params={{ invoiceId: inv.id }} className="hover:underline">
+                            {inv.title}
+                          </Link>
+                        </td>
+                        <td className="px-5 py-3 text-muted-foreground tabular-nums">{Number(inv.amount).toLocaleString("ar-DZ")} دج</td>
+                        <td className="px-5 py-3 text-muted-foreground tabular-nums">{inv.due_date || "—"}</td>
+                        <td className="px-5 py-3">
+                          {canManage ? (
+                            <select
+                              value={inv.status}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => setStatus(inv, e.target.value)}
+                              className={`text-[11px] font-semibold px-2 py-1 rounded-md border-0 focus:outline-none focus:ring-1 focus:ring-gold ${st.cls}`}
+                            >
+                              {Object.entries(STATUS_LABELS).map(([value, { label }]) => (
+                                <option key={value} value={value}>{label}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-md ${st.cls}`}>{st.label}</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </AppShell>
   );
 }
 
-function EditInvoiceForm({
-  invoice,
+function NewInvoiceForm({
+  organizationId,
   clients,
   contracts,
   onDone,
-  onSaved,
+  onCreated,
 }: {
-  invoice: Invoice;
+  organizationId: string;
   clients: Client[];
   contracts: Contract[];
   onDone: () => void;
-  onSaved: () => void;
+  onCreated: () => void;
 }) {
-  const [title, setTitle] = useState(invoice.title);
-  const [amount, setAmount] = useState(String(invoice.amount));
-  const [status, setStatus] = useState(invoice.status);
-  const [dueDate, setDueDate] = useState(invoice.due_date ?? "");
-  const [clientId, setClientId] = useState(invoice.client_id ?? "");
-  const [contractId, setContractId] = useState(invoice.contract_id ?? "");
+  const [title, setTitle] = useState("");
+  const [amount, setAmount] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [clientId, setClientId] = useState("");
+  const [contractId, setContractId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -254,51 +249,34 @@ function EditInvoiceForm({
     setLoading(true);
     setError(null);
 
-    const payload: TablesUpdate<"invoices"> = {
+    const payload: TablesInsert<"invoices"> = {
+      organization_id: organizationId,
       title: title.trim(),
       amount: Number(amount),
-      status,
       due_date: dueDate || null,
       client_id: clientId || null,
       contract_id: contractId || null,
-      paid_at: status === "paid" ? (invoice.paid_at ?? new Date().toISOString()) : null,
     };
 
-    const { error: updateError } = await supabase.from("invoices").update(payload).eq("id", invoice.id);
+    const { error: insertError } = await supabase.from("invoices").insert(payload);
     setLoading(false);
 
-    if (updateError) {
-      setError(updateError.message);
+    if (insertError) {
+      setError(insertError.message);
       return;
     }
 
-    onSaved();
+    onCreated();
+    onDone();
   };
 
   return (
     <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-border p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="font-bold text-navy">تعديل الفاتورة</h2>
-        <button type="button" onClick={onDone} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground">
-          <X className="w-4 h-4" />
-        </button>
-      </div>
+      <h2 className="font-bold text-navy">فاتورة جديدة</h2>
 
       <div className="grid sm:grid-cols-2 gap-4">
-        <Field label="عنوان الفاتورة" value={title} onChange={setTitle} required />
-        <Field label="المبلغ (دج)" value={amount} onChange={setAmount} type="number" required />
-        <div>
-          <label className="text-sm font-semibold text-navy">الحالة</label>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="mt-2 w-full h-11 rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none px-4 text-sm"
-          >
-            {Object.entries(STATUS_LABELS).map(([value, { label }]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
-        </div>
+        <Field label="عنوان الفاتورة" value={title} onChange={setTitle} required placeholder="مثال: أتعاب توثيق عقد بيع" />
+        <Field label="المبلغ (دج)" value={amount} onChange={setAmount} type="number" required placeholder="50000" />
         <Field label="تاريخ الاستحقاق" value={dueDate} onChange={setDueDate} type="date" />
         <div>
           <label className="text-sm font-semibold text-navy">العميل (اختياري)</label>
@@ -341,7 +319,7 @@ function EditInvoiceForm({
         className="inline-flex items-center justify-center gap-2 bg-gold text-gold-foreground rounded-xl h-11 px-6 font-bold hover:brightness-95 transition disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-        {loading ? "جاري الحفظ..." : "حفظ التعديلات"}
+        {loading ? "جاري الحفظ..." : "حفظ الفاتورة"}
       </button>
     </form>
   );
