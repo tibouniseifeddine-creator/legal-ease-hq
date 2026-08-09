@@ -172,43 +172,45 @@ function InvoicesPage() {
               </p>
             </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs text-muted-foreground bg-muted/40">
-                  <th className="text-right font-medium px-5 py-3">الفاتورة</th>
-                  <th className="text-right font-medium px-5 py-3">المبلغ</th>
-                  <th className="text-right font-medium px-5 py-3">الاستحقاق</th>
-                  <th className="text-right font-medium px-5 py-3">الحالة</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoices.map((inv) => {
-                  const st = STATUS_LABELS[inv.status] ?? STATUS_LABELS.unpaid;
-                  return (
-                    <tr key={inv.id} className="border-t border-border">
-                      <td className="px-5 py-3 font-medium">{inv.title}</td>
-                      <td className="px-5 py-3 text-muted-foreground tabular-nums">{Number(inv.amount).toLocaleString("ar-DZ")} دج</td>
-                      <td className="px-5 py-3 text-muted-foreground tabular-nums">{inv.due_date || "—"}</td>
-                      <td className="px-5 py-3">
-                        {canManage ? (
-                          <select
-                            value={inv.status}
-                            onChange={(e) => setStatus(inv, e.target.value)}
-                            className={`text-[11px] font-semibold px-2 py-1 rounded-md border-0 focus:outline-none focus:ring-1 focus:ring-gold ${st.cls}`}
-                          >
-                            {Object.entries(STATUS_LABELS).map(([value, { label }]) => (
-                              <option key={value} value={value}>{label}</option>
-                            ))}
-                          </select>
-                        ) : (
-                          <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-md ${st.cls}`}>{st.label}</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[480px]">
+                <thead>
+                  <tr className="text-xs text-muted-foreground bg-muted/40">
+                    <th className="text-right font-medium px-5 py-3">الفاتورة</th>
+                    <th className="text-right font-medium px-5 py-3">المبلغ</th>
+                    <th className="text-right font-medium px-5 py-3">الاستحقاق</th>
+                    <th className="text-right font-medium px-5 py-3">الحالة</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoices.map((inv) => {
+                    const st = STATUS_LABELS[inv.status] ?? STATUS_LABELS.unpaid;
+                    return (
+                      <tr key={inv.id} className="border-t border-border">
+                        <td className="px-5 py-3 font-medium">{inv.title}</td>
+                        <td className="px-5 py-3 text-muted-foreground tabular-nums">{Number(inv.amount).toLocaleString("ar-DZ")} دج</td>
+                        <td className="px-5 py-3 text-muted-foreground tabular-nums">{inv.due_date || "—"}</td>
+                        <td className="px-5 py-3">
+                          {canManage ? (
+                            <select
+                              value={inv.status}
+                              onChange={(e) => setStatus(inv, e.target.value)}
+                              className={`text-[11px] font-semibold px-2 py-1 rounded-md border-0 focus:outline-none focus:ring-1 focus:ring-gold ${st.cls}`}
+                            >
+                              {Object.entries(STATUS_LABELS).map(([value, { label }]) => (
+                                <option key={value} value={value}>{label}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-md ${st.cls}`}>{st.label}</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
