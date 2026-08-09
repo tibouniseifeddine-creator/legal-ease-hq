@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ArrowRight, Plus, FileText, Loader2, X, AlertCircle, Wand2 } from "lucide-react";
@@ -188,6 +188,7 @@ export function generateContractText(p: {
 
 function ContractsPage() {
   const { organization } = Route.useRouteContext();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: contracts } = useSuspenseQuery(contractsQueryOptions(organization.id));
   const { data: clients } = useSuspenseQuery(clientsListQueryOptions(organization.id));
@@ -264,11 +265,13 @@ function ContractsPage() {
                   {contracts.map((c) => {
                     const st = STATUS_LABELS[c.status] ?? STATUS_LABELS.draft;
                     return (
-                      <tr key={c.id} className="border-t border-border hover:bg-muted/30">
+                     <tr
+                        key={c.id}
+                        onClick={() => navigate({ to: "/contracts/$contractId", params: { contractId: c.id } })}
+                        className="border-t border-border hover:bg-muted/30 active:bg-muted/50 cursor-pointer"
+                      >
                         <td className="px-5 py-3 font-medium">
-                          <Link to="/contracts/$contractId" params={{ contractId: c.id }} className="hover:underline">
-                            {c.title}
-                          </Link>
+                          <span className="hover:underline">{c.title}</span>
                         </td>
                         <td className="px-5 py-3 text-muted-foreground">{TYPE_LABELS[c.contract_type] ?? c.contract_type}</td>
                         <td className="px-5 py-3">
