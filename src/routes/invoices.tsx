@@ -186,8 +186,12 @@ function InvoicesPage() {
                   {invoices.map((inv) => {
                     const st = STATUS_LABELS[inv.status] ?? STATUS_LABELS.unpaid;
                     return (
-                      <tr key={inv.id} className="border-t border-border">
-                        <td className="px-5 py-3 font-medium">{inv.title}</td>
+                      <tr key={inv.id} className="border-t border-border hover:bg-muted/30">
+                        <td className="px-5 py-3 font-medium">
+                          <Link to="/invoices/$invoiceId" params={{ invoiceId: inv.id }} className="hover:underline">
+                            {inv.title}
+                          </Link>
+                        </td>
                         <td className="px-5 py-3 text-muted-foreground tabular-nums">{Number(inv.amount).toLocaleString("ar-DZ")} دج</td>
                         <td className="px-5 py-3 text-muted-foreground tabular-nums">{inv.due_date || "—"}</td>
                         <td className="px-5 py-3">
@@ -289,8 +293,9 @@ function NewInvoiceForm({
         <div>
           <label className="text-sm font-semibold text-navy">العقد (اختياري)</label>
           <select
-            value={contractId}
-            onChange={(e) => setContractId(e.target.value)}
+                              value={inv.status}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => setStatus(inv, e.target.value)}
             className="mt-2 w-full h-11 rounded-xl bg-muted/60 border border-transparent focus:border-gold focus:bg-background focus:outline-none px-4 text-sm"
           >
             <option value="">— بدون —</option>
