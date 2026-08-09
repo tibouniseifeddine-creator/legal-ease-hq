@@ -105,8 +105,12 @@ function PropertiesPage() {
                   {properties.map((p) => {
                     const st = STATUS_LABELS[p.status] ?? STATUS_LABELS.available;
                     return (
-                      <tr key={p.id} className="border-t border-border">
-                        <td className="px-5 py-3 font-medium">{p.title}</td>
+                      <tr key={p.id} className="border-t border-border hover:bg-muted/30">
+                        <td className="px-5 py-3 font-medium">
+                          <Link to="/properties/$propertyId" params={{ propertyId: p.id }} className="hover:underline">
+                            {p.title}
+                          </Link>
+                        </td>
                         <td className="px-5 py-3 text-muted-foreground">{TYPE_LABELS[p.property_type] ?? p.property_type}</td>
                         <td className="px-5 py-3 text-muted-foreground">{p.city || "—"}</td>
                         <td className="px-5 py-3 text-muted-foreground tabular-nums">
