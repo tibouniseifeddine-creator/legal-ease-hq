@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { generateText, Output, NoObjectGeneratedError } from "ai";
 import { z } from "zod";
-import { createLovableAiGatewayProvider } from "./ai-gateway.server";
+import { createOpenAIDirectProvider } from "./ai-gateway.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const ReviewInput = z.object({
@@ -45,11 +45,11 @@ export const reviewContract = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => ReviewInput.parse(input))
   .handler(async ({ data }): Promise<ContractReview> => {
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) throw new Error("مفتاح الذكاء الاصطناعي غير مُهيأ");
+    const key = process.env.OPENAI_API_KEY;
+    if (!key) throw new Error("مفتاح OpenAI غير مُهيأ");
 
-    const gateway = createLovableAiGatewayProvider(key, { structuredOutputs: true });
-    const model = gateway("openai/gpt-5.5");
+    const gateway = createOpenAIDirectProvider(key, { structuredOutputs: true });
+    const model = gateway("gpt-5.5");
 
     const userPrompt = [
       data.contractType ? `نوع العقد: ${data.contractType}` : null,
