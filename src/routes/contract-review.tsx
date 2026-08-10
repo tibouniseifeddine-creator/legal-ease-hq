@@ -57,7 +57,7 @@ function ContractReviewPage() {
 
       <div className="max-w-6xl mx-auto grid lg:grid-cols-[1fr_1.2fr] gap-6">
         {/* Input */}
-        <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-border p-6 space-y-4 h-fit sticky top-24">
+        <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-border p-6 space-y-4 lg:h-fit lg:sticky lg:top-24">
           <div>
             <label className="text-sm font-semibold text-navy">نوع العقد</label>
             <input
